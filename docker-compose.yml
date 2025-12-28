@@ -1,0 +1,77 @@
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - vidkeep_data:/data
+    environment:
+      DATABASE_URL: postgresql+asyncpg://vidkeep:vidkeep@postgres:5432/vidkeep
+      REDIS_URL: redis://redis:6379
+      DATA_PATH: /data
+      MAX_VIDEO_HEIGHT: 1080
+      WORKER_COUNT: 2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  worker:
+    build: ./backend
+    command: arq app.worker.WorkerSettings
+    volumes:
+      - vidkeep_data:/data
+    environment:
+      DATABASE_URL: postgresql+asyncpg://vidkeep:vidkeep@postgres:5432/vidkeep
+      REDIS_URL: redis://redis:6379
+      DATA_PATH: /data
+      MAX_VIDEO_HEIGHT: 1080
+      WORKER_COUNT: 2
+    deploy:
+      replicas: 2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+    ports:
+      - "3000:80"
+
+  postgres:
+    image: postgres:16-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: vidkeep
+      POSTGRES_PASSWORD: vidkeep
+      POSTGRES_DB: vidkeep
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vidkeep -d vidkeep"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  vidkeep_data:
+  postgres_data:
