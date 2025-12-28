@@ -78,7 +78,8 @@ CREATE TABLE videos (
     description TEXT,
     is_favorite BOOLEAN DEFAULT FALSE,
     status VARCHAR(20) DEFAULT 'pending',  -- pending, downloading, complete, failed
-    download_progress INTEGER DEFAULT 0,   -- 0-100 percentage
+    -- file_size_bytes is computed live for single-item detail views, but is persisted
+    -- once status = 'complete' to support list views / sorting without filesystem access.
     file_size_bytes BIGINT,
     created_at TIMESTAMP DEFAULT NOW(),
     error_message TEXT
@@ -93,7 +94,7 @@ CREATE INDEX idx_status ON videos(status);
 
 1. **API Layer**: FastAPI endpoints for CRUD operations and ingestion triggers.
 2. **Task Queue**: ARQ with Redis for background download jobs. Worker count configurable via `WORKER_COUNT` environment variable.
-3. **Ingestion Worker**: Pulls jobs from queue, executes yt-dlp, updates progress in database, saves files to `/data`.
+3. **Ingestion Worker**: Pulls jobs from queue, executes yt-dlp, streams progress events (e.g., via Redis/WebSocket), saves files to `/data`, and persists `file_size_bytes` when complete.
 4. **Streaming Service**: Range-request enabled endpoint for seeking within video files.
 5. **Frontend**: Responsive grid displaying thumbnails with real-time progress overlay for active downloads.
 
@@ -104,12 +105,35 @@ User submits URL
     → API validates and creates DB record (status: pending)
     → Job pushed to ARQ queue
     → Worker picks up job (status: downloading)
-    → yt-dlp progress callback updates download_progress in DB
-    → Frontend polls or receives WebSocket update
+    → yt-dlp progress callback emits progress events (no DB write)
+        → Redis pub/sub: PUBLISH progress:{video_id} {"percent": 42, "downloaded_bytes": 123, "total_bytes": 456}
+    → API exposes a WebSocket endpoint that subscribes to progress:{video_id} and forwards updates to connected clients
+    → API/UI exposes download_progress as a computed field (derived from Redis/in-memory live progress state)
+    → Frontend subscribes (WebSocket) or polls the API for computed progress
     → Thumbnail shows percentage overlay
-    → Complete: status → complete, progress → 100
+    → Complete: status → complete, file_size_bytes persisted
     → Failed: status → failed, error_message populated
 ```
+
+### API Response Shape (Computed Fields)
+
+The database schema stores durable metadata only. The API response includes computed/derived fields for frontend convenience:
+
+```json
+{
+  "video_id": "dQw4w9WgXcQ",
+  "title": "…",
+  "channel_name": "…",
+  "status": "downloading",
+  "download_progress": 42,
+  "youtube_url": "https://youtube.com/watch?v=dQw4w9WgXcQ",
+  "file_size_bytes": null
+}
+```
+
+- `download_progress` is **computed** from the latest live progress (Redis pub/sub and/or in-memory state) and is **not** stored in Postgres.
+- `youtube_url` is **reconstructed** from `video_id` (no `yt_url` column required), enabling the Phase 4 “External link” action.
+- `file_size_bytes` may be computed live for single-item views; it is persisted once `status = 'complete'` to support list views / sorting.
 
 ## 5. API Endpoints
 
