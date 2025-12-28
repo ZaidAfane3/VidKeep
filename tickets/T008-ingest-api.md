@@ -178,14 +178,14 @@ app.include_router(videos.router)
 
 ## 3. Implementation Verification
 
-- [ ] Valid YouTube URLs are accepted (watch, youtu.be, embed, mobile)
-- [ ] Invalid URLs return 400 Bad Request
-- [ ] Duplicate complete videos return 409 Conflict
-- [ ] Failed videos can be retried
-- [ ] Metadata is fetched before queuing
-- [ ] Database record is created with status=pending
-- [ ] Download job is queued in ARQ
-- [ ] Returns 202 Accepted with video_id
+- [x] Valid YouTube URLs are accepted (watch, youtu.be, embed, mobile)
+- [x] Invalid URLs return 400 Bad Request
+- [x] Duplicate complete videos return 409 Conflict
+- [x] Failed videos can be retried
+- [x] Metadata is fetched before queuing
+- [x] Database record is created with status=pending
+- [x] Download job is queued in ARQ
+- [x] Returns 202 Accepted with video_id
 
 ### Tests to Write
 
@@ -248,6 +248,16 @@ docker-compose exec redis redis-cli KEYS "arq:*"
 
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
+| 2025-12-28 | Created app/services/url_validator.py | Success | URL validator with 4 YouTube URL patterns (standard, short, embed, mobile) |
+| 2025-12-28 | Created app/routers/videos.py with POST /api/videos/ingest | Success | Full endpoint implementation with duplicate detection and retry logic |
+| 2025-12-28 | Updated app/main.py to include videos router | Success | Router properly registered and accessible at /api/videos/ingest |
+| 2025-12-28 | Rebuilt Docker image with backend API | Success | docker-compose build --no-cache api completed successfully |
+| 2025-12-28 | Tested standard YouTube URL (youtube.com/watch?v=...) | Success | Returns 202 Accepted with video_id, metadata fetched, database record created, job queued |
+| 2025-12-28 | Tested YouTube short URL (youtu.be/...) | Success | Returns 202 Accepted with video_id, proper URL parsing |
+| 2025-12-28 | Tested invalid URL (non-YouTube domain) | Success | Returns 400 Bad Request with error detail "Invalid YouTube URL format" |
+| 2025-12-28 | Tested duplicate video (downloading status) | Success | Returns 409 Conflict with detail "Video already exists with status: downloading" |
+| 2025-12-28 | Verified database records creation | Success | Videos in DB with correct video_id, title from metadata, status='downloading' (set by worker) |
+| 2025-12-28 | Verified job queuing via ARQ | Success | Worker picked up download jobs automatically, status changed to downloading |
 
 ## 5. Comments
 

@@ -276,6 +276,14 @@ docker-compose exec redis redis-cli SUBSCRIBE "progress:*"
 
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
+| 2025-12-28 | Created app/services/__init__.py | Success | Services package initialized |
+| 2025-12-28 | Created app/services/ytdlp.py | Success | YTDLPService with extract_info and download methods |
+| 2025-12-28 | Updated app/tasks/download.py | Success | Full download task with progress tracking and DB updates |
+| 2025-12-28 | Tested yt-dlp format selection | Success | avc1/mp4a formats available for all resolutions |
+| 2025-12-28 | Tested metadata extraction | Success | Extracted video ID, title, channel, duration, upload date |
+| 2025-12-28 | Tested date parsing | Success | parse_upload_date correctly converts YYYYMMDD format |
+| 2025-12-28 | Tested paths configuration | Success | Video and thumbnail directories created at /data/videos and /data/thumbnails |
+| 2025-12-28 | Verified worker registration | Success | Both workers registered for download_video function |
 
 ## 5. Comments
 

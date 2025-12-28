@@ -269,6 +269,16 @@ docker-compose exec worker python -c "from PIL import Image; Image.open('/data/t
 
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
+| 2025-12-28 | Created app/services/thumbnail.py | Success | ThumbnailService with PNG/WEBP/JPG conversion |
+| 2025-12-28 | Updated app/services/ytdlp.py | Success | Added extract_metadata, truncate_text, parse_upload_date helpers |
+| 2025-12-28 | Updated app/tasks/download.py | Success | Full integration with thumbnail processing and metadata extraction |
+| 2025-12-28 | Tested metadata extraction | Success | extract_metadata handles missing fields with proper fallbacks |
+| 2025-12-28 | Tested truncate_text | Success | Text truncation to max_length working correctly |
+| 2025-12-28 | Tested PNG to JPEG conversion | Success | Resizes to 640px max, quality 85, file size reduced |
+| 2025-12-28 | Tested RGBA to RGB conversion | Success | RGBA/P modes properly converted to RGB before JPEG |
+| 2025-12-28 | Tested file cleanup | Success | Original files cleaned up after conversion |
+| 2025-12-28 | Tested idempotency | Success | Calling process_thumbnail twice returns same path |
+| 2025-12-28 | Tested channel fallbacks | Success | channel → uploader → "Unknown" fallback chain works |
 
 ## 5. Comments
 

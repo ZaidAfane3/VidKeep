@@ -5,13 +5,13 @@
 | Metric | Count |
 |--------|-------|
 | Total Tickets | 22 |
-| Completed | 5 |
+| Completed | 8 |
 | In Progress | 0 |
-| Remaining | 17 |
+| Remaining | 14 |
 
 ## Current Focus
 
-**Next Ticket**: [T006 - yt-dlp Integration](./tickets/T006-ytdlp-integration.md)
+**Next Ticket**: [T009 - Video Streaming with Range Support](./tickets/T009-video-streaming.md)
 
 ---
 
@@ -35,9 +35,9 @@ Building the download system: worker queue, yt-dlp integration, and ingest API.
 | Ticket | Title | Status | Dependencies | Comments |
 |--------|-------|--------|--------------|----------|
 | [T005](./tickets/T005-arq-worker.md) | ARQ Worker Setup | Complete | T004 | Worker ready for downloads |
-| [T006](./tickets/T006-ytdlp-integration.md) | yt-dlp Integration | Pending | T005 | Core download logic |
-| [T007](./tickets/T007-thumbnail-metadata.md) | Thumbnail & Metadata Extraction | Pending | T006 | Image processing |
-| [T008](./tickets/T008-ingest-api.md) | Ingest API Endpoint | Pending | T007 | POST /api/videos/ingest |
+| [T006](./tickets/T006-ytdlp-integration.md) | yt-dlp Integration | Complete | T005 | Downloads H.264/AAC/MP4 |
+| [T007](./tickets/T007-thumbnail-metadata.md) | Thumbnail & Metadata Extraction | Complete | T006 | JPG conversion, metadata helpers |
+| [T008](./tickets/T008-ingest-api.md) | Ingest API Endpoint | Complete | T007 | POST /api/videos/ingest ✓ |
 
 ---
 
