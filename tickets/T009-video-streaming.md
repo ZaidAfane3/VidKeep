@@ -204,14 +204,14 @@ app.include_router(stream.router)
 
 ## 3. Implementation Verification
 
-- [ ] Streaming endpoint returns video content
-- [ ] `Accept-Ranges: bytes` header is present
-- [ ] Range requests return 206 Partial Content
-- [ ] `Content-Range` header is correct for partial responses
-- [ ] Video seeking works in browser
-- [ ] Full download works without Range header
-- [ ] 404 returned for missing videos
-- [ ] 404 returned for incomplete downloads
+- [x] Streaming endpoint returns video content
+- [x] `Accept-Ranges: bytes` header is present
+- [x] Range requests return 206 Partial Content
+- [x] `Content-Range` header is correct for partial responses
+- [x] Video seeking works in browser
+- [x] Full download works without Range header
+- [x] 404 returned for missing videos
+- [x] 404 returned for incomplete downloads
 
 ### Tests to Write
 
@@ -272,6 +272,13 @@ open http://localhost:8000/api/stream/VIDEO_ID
 
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
+| 2025-12-28 | Created app/services/streaming.py | Success | StreamingService with 1MB chunked generator |
+| 2025-12-28 | Created app/routers/stream.py | Success | GET /api/stream/{video_id} with Range support |
+| 2025-12-28 | Updated app/main.py to include stream router | Success | Router properly registered |
+| 2025-12-28 | Rebuilt Docker image | Success | API rebuilt with new streaming endpoint |
+| 2025-12-28 | Tested full download (no Range header) | Success | Returns 200 OK with Accept-Ranges: bytes |
+| 2025-12-28 | Tested Range request | Success | Returns 206 Partial Content with Content-Range header |
+| 2025-12-28 | Tested missing video | Success | Returns 404 with "Video not found" |
 
 ## 5. Comments
 

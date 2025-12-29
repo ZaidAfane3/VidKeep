@@ -322,6 +322,14 @@ curl http://localhost:8000/api/queue/status
 
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
+| 2025-12-28 | Added list_videos endpoint with filters | Works | Filters: channel, favorites_only, status |
+| 2025-12-28 | Added get_video endpoint | Works | Returns 404 for non-existent |
+| 2025-12-28 | Added update_video (PATCH) | Works | Toggle favorite tested |
+| 2025-12-28 | Added delete_video endpoint | Works | Returns 204, 404 tested |
+| 2025-12-28 | Created channels.py router | Works | Returns channels with counts |
+| 2025-12-28 | Created queue.py router | Works | Returns pending/processing counts |
+| 2025-12-28 | Updated main.py with new routers | Works | All routers registered |
+| 2025-12-28 | Full endpoint testing | All pass | Phase 3 complete! |
 
 ## 5. Comments
 

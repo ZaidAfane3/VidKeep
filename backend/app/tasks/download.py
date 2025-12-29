@@ -19,6 +19,9 @@ async def download_video(ctx, video_id: str, url: str):
     ytdlp = YTDLPService()
     thumbnail_service = ThumbnailService()
 
+    # Capture the event loop for use in sync callback
+    loop = asyncio.get_running_loop()
+
     # Update status to downloading
     async with async_session() as db:
         video = await db.get(Video, video_id)
@@ -27,15 +30,15 @@ async def download_video(ctx, video_id: str, url: str):
             await db.commit()
 
     try:
-        # Progress callback for Redis pub/sub
+        # Progress callback for Redis pub/sub (called from sync context)
         def progress_hook(d):
             if d['status'] == 'downloading':
                 total = d.get('total_bytes') or d.get('total_bytes_estimate', 0)
                 downloaded = d.get('downloaded_bytes', 0)
                 percent = int((downloaded / total * 100)) if total > 0 else 0
 
-                # Publish progress (fire and forget)
-                asyncio.create_task(
+                # Schedule coroutine from sync callback (thread-safe)
+                asyncio.run_coroutine_threadsafe(
                     redis.publish(
                         f"progress:{video_id}",
                         json.dumps({
@@ -43,7 +46,8 @@ async def download_video(ctx, video_id: str, url: str):
                             "downloaded_bytes": downloaded,
                             "total_bytes": total
                         })
-                    )
+                    ),
+                    loop
                 )
 
         # Download the video
