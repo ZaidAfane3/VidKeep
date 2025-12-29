@@ -296,16 +296,16 @@ function App() {
 
 ## 3. Implementation Verification
 
-- [ ] Channel dropdown shows all unique channels with counts
-- [ ] Selecting a channel filters the video grid
-- [ ] "All Channels" option clears the filter
-- [ ] Favorites toggle highlights when active
-- [ ] Favorites toggle filters to favorite videos only
-- [ ] Favorites count badge shows current count
-- [ ] Clear filters button resets both filters
-- [ ] Active filter state is displayed to user
-- [ ] Filters work in combination (channel + favorites)
-- [ ] Header is sticky on scroll
+- [x] Channel dropdown shows all unique channels with counts
+- [x] Selecting a channel filters the video grid
+- [x] "All Channels" option clears the filter
+- [x] Favorites toggle highlights when active
+- [x] Favorites toggle filters to favorite videos only
+- [x] Favorites count badge shows current count
+- [x] Clear filters button resets both filters
+- [x] Active filter state is displayed to user
+- [x] Filters work in combination (channel + favorites)
+- [x] Header is sticky on scroll
 
 ### Tests to Write
 
@@ -401,15 +401,23 @@ npm run dev
 
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
+| 2024-12-29 | Created useChannels.ts hook | Success | Fetches channels with loading/error states |
+| 2024-12-29 | Created ChannelFilter.tsx | Success | Fixed property name (channel_name vs name) |
+| 2024-12-29 | Created FavoritesToggle.tsx | Success | Heart icon with count badge |
+| 2024-12-29 | Created Header.tsx | Success | Responsive header with mobile filter row |
+| 2024-12-29 | Updated App.tsx | Success | Integrated filters with useVideos hook |
+| 2024-12-29 | Verified build | Success | dist: 167KB JS, 19KB CSS |
 
 ## 5. Comments
 
+- Implemented with Phosphor Console terminal styling (uppercase, term-* colors)
 - Header is sticky for easy access to filters while scrolling
-- Channel dropdown includes video count for context
-- Favorites count helps users know how many favorites exist
+- Channel dropdown shows channel_name with video_count in uppercase
+- Favorites toggle uses Heart icon from lucide-react with fill on active
 - Clear filters button only appears when filters are active
-- Filter state is displayed clearly above the grid
-- Mobile layout stacks logo above filters
-- useChannels hook caches channel list
-- useVideos hook refetches when filters change
-- Next ticket (T018) implements the ingest form
+- Active filter indicator bar shows current filter state below header
+- Mobile layout: compact Plus button, filters in separate row below header
+- Desktop layout: full "ADD VIDEO" button with divider before filters
+- useChannels hook includes refresh() for updating after new video ingest
+- useVideos hook refetches when channel or favoritesOnly filters change
+- T018 adds the ingest form modal triggered from Header's Add Video button

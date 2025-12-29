@@ -1,0 +1,267 @@
+/* Google Fonts - VT323 Terminal Font */
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   PHOSPHOR CONSOLE GLOBAL STYLES
+   Based on Design.md "Phosphor Console" Theme
+   ============================================ */
+
+/* ---------- BASE LAYER ---------- */
+@layer base {
+  /* CRITICAL: Force 0px border-radius globally (Design.md Section 7) */
+  *,
+  *::before,
+  *::after {
+    border-radius: 0 !important;
+  }
+
+  /* HTML/Body base styles */
+  html {
+    font-family: 'VT323', monospace;
+    background-color: #050505;
+    color: #00ff41;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: #050505;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Selection styles (Design.md Section 3.3) */
+  ::selection {
+    background-color: #00ff41;
+    color: #000000;
+  }
+
+  ::-moz-selection {
+    background-color: #00ff41;
+    color: #000000;
+  }
+
+  /* Custom Scrollbars (Design.md Section 7) */
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #050505;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #050505;
+    border: 1px solid #004611;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    border-color: #00ff41;
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #004611 #050505;
+  }
+
+  /* Input autofill hack for black bg (Design.md Section 7) */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #050505 inset !important;
+    -webkit-text-fill-color: #00ff41 !important;
+    caret-color: #00ff41;
+  }
+
+  /* Focus visible for accessibility */
+  :focus-visible {
+    outline: 2px solid #00ff41;
+    outline-offset: 2px;
+  }
+}
+
+/* ---------- COMPONENT LAYER ---------- */
+@layer components {
+  /* Scanlines Overlay (Design.md Section 3.1) */
+  .scanlines {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0) 50%,
+      rgba(0, 0, 0, 0.1) 50%,
+      rgba(0, 0, 0, 0.1)
+    );
+    background-size: 100% 4px;
+    opacity: 0.6;
+  }
+
+  /* Reduced motion: disable scanlines animation if needed */
+  @media (prefers-reduced-motion: reduce) {
+    .scanlines {
+      opacity: 0.3;
+    }
+  }
+
+  /* Text Glow Effect (Design.md Section 3.2) */
+  .text-glow {
+    text-shadow: 0 0 2px rgba(0, 255, 65, 0.3);
+  }
+
+  /* Terminal Text Styles */
+  .text-terminal {
+    font-family: 'VT323', monospace;
+    color: #00ff41;
+    text-shadow: 0 0 2px rgba(0, 255, 65, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Terminal Input (Design.md Section 4.2) */
+  .input-terminal {
+    @apply bg-term-bg border border-term-dim text-term-primary;
+    @apply focus:border-term-primary focus:outline-none;
+    @apply uppercase tracking-widest;
+    font-family: 'VT323', monospace;
+  }
+
+  .input-terminal:focus {
+    box-shadow: none;
+  }
+
+  .input-terminal::placeholder {
+    @apply text-term-primary/40 uppercase;
+  }
+
+  /* Primary Button - "Execute" (Design.md Section 4.1 Variant A) */
+  .btn-primary {
+    @apply bg-term-primary text-black font-bold border-none;
+    @apply hover:bg-white hover:text-black;
+    @apply active:scale-95;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-1;
+    font-family: 'VT323', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 150ms ease-in-out;
+  }
+
+  /* Secondary Button - "Ghost" (Design.md Section 4.1 Variant B) */
+  .btn-secondary {
+    @apply bg-transparent border border-term-primary text-term-primary;
+    @apply hover:bg-term-primary hover:text-black;
+    @apply active:scale-95;
+    @apply px-4 py-1;
+    font-family: 'VT323', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 150ms ease-in-out;
+  }
+
+  /* Destructive Button (Design.md Section 4.1 Variant C) */
+  .btn-destructive {
+    @apply bg-transparent border border-term-error text-term-error;
+    @apply hover:bg-term-error hover:text-black;
+    @apply active:scale-95;
+    @apply px-4 py-1;
+    font-family: 'VT323', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 150ms ease-in-out;
+  }
+
+  /* Video Card Container (Design.md Section 4.3) */
+  .card-terminal {
+    @apply bg-term-card border border-term-dim;
+    @apply hover:border-term-primary;
+    transition: all 150ms ease-in-out;
+  }
+
+  .card-terminal:hover {
+    box-shadow: 0 0 8px rgba(0, 255, 65, 0.4);
+  }
+
+  /* Modal Overlay (Design.md Section 4.4) */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/95;
+    backdrop-filter: none;
+  }
+
+  /* Modal Panel (Design.md Section 4.4) */
+  .modal-panel {
+    @apply bg-term-bg border-2 border-term-primary;
+    box-shadow: 0 0 30px rgba(0, 255, 65, 0.2);
+  }
+
+  /* Modal Header Bar (Design.md Section 4.4) */
+  .modal-header {
+    @apply bg-term-primary text-black font-bold uppercase px-4 py-1;
+    @apply flex justify-between items-center;
+  }
+
+  /* Status Badges (Design.md Section 4.3) */
+  .badge-pending {
+    @apply bg-term-warning text-black font-bold uppercase text-sm px-2 py-0.5;
+  }
+
+  .badge-downloading {
+    @apply bg-term-primary text-black font-bold uppercase text-sm px-2 py-0.5;
+  }
+
+  .badge-error {
+    @apply bg-term-error text-black font-bold uppercase text-sm px-2 py-0.5;
+  }
+
+  /* Thumbnail with CRT effect (Design.md Section 4.3) */
+  .thumbnail-terminal {
+    @apply grayscale opacity-80;
+    @apply hover:grayscale-0 hover:opacity-100;
+    transition: all 150ms ease-in-out;
+  }
+
+  /* Skeleton loading animation */
+  .skeleton {
+    @apply bg-term-dim/30 animate-pulse;
+  }
+}
+
+/* ---------- UTILITY LAYER ---------- */
+@layer utilities {
+  /* RTL Support */
+  [dir="rtl"] {
+    text-align: right;
+  }
+
+  /* Uppercase dominant text */
+  .text-upper-terminal {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Dim text opacity */
+  .text-dim {
+    opacity: 0.6;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

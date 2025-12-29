@@ -2,7 +2,7 @@
 
 ## 📊 Project Status Overview
 
-**Overall Progress: 11/22 tickets (50%)**
+**Overall Progress: 18/22 tickets (82%)**
 
 ### Phase Completion Status
 
@@ -11,8 +11,8 @@
 | **Phase 1: Foundation** | 4/4 | ✅ COMPLETE | 100% |
 | **Phase 2: Ingestion Pipeline** | 4/4 | ✅ COMPLETE | 100% |
 | **Phase 3: Streaming Service** | 3/3 | ✅ COMPLETE | 100% |
-| **Phase 4: Frontend** | 7/7 | ⏳ PENDING | 0% |
-| **Phase 5: Polish** | 4/4 | ⏳ PENDING | 0% |
+| **Phase 4: Frontend** | 7/7 | ✅ COMPLETE | 100% |
+| **Phase 5: Polish** | 0/4 | ⏳ PENDING | 0% |
 
 ### Key Milestones Achieved
 - ✅ Docker multi-container setup with PostgreSQL, Redis, and FastAPI
@@ -21,9 +21,16 @@
 - ✅ Thumbnail serving with 24-hour cache headers
 - ✅ Complete CRUD API for video management
 - ✅ Channel aggregation and queue status endpoints
+- ✅ React/Vite frontend with Phosphor Console theme (VT323 font, scanlines, green-on-black)
+- ✅ Video grid with responsive layout (1-4 columns)
+- ✅ Video cards with status badges, progress overlays, and RTL support
+- ✅ Action overlay with YouTube, Play, Download buttons and mobile touch support
+- ✅ Video player modal with HTML5 player, keyboard shortcuts, and collapsible description
+- ✅ Channel filter dropdown and favorites toggle in responsive header
+- ✅ Ingest form modal with YouTube URL validation and auto-refresh
 
 ### What's Next
-The backend is production-ready. Phase 4 focuses on building the React UI with Tailwind CSS, starting with the Vite project setup.
+Phase 5 (Polish) begins with WebSocket progress updates (T019).
 
 ---
 
@@ -32,13 +39,13 @@ The backend is production-ready. Phase 4 focuses on building the React UI with T
 | Metric | Count |
 |--------|-------|
 | Total Tickets | 22 |
-| Completed | 11 |
+| Completed | 18 |
 | In Progress | 0 |
-| Remaining | 11 |
+| Remaining | 4 |
 
 ## Current Focus
 
-**Next Ticket**: [T012 - React/Vite Project Setup](./tickets/T012-react-vite-setup.md)
+**Next Ticket**: [T019 - WebSocket Progress Updates](./tickets/T019-websocket-progress.md)
 
 ---
 
@@ -86,13 +93,13 @@ Building the React UI: video grid, player, filters, and forms.
 
 | Ticket | Title | Status | Dependencies | Comments |
 |--------|-------|--------|--------------|----------|
-| [T012](./tickets/T012-react-vite-setup.md) | React/Vite Project Setup | Pending | T001 | Tailwind, TypeScript |
-| [T013](./tickets/T013-video-grid.md) | Video Grid Component | Pending | T012 | Responsive layout |
-| [T014](./tickets/T014-thumbnail-card.md) | Thumbnail Card Component | Pending | T013 | Status overlays |
-| [T015](./tickets/T015-action-overlay.md) | Action Overlay | Pending | T014 | YouTube/Play/Download |
-| [T016](./tickets/T016-video-player-modal.md) | Video Player Modal | Pending | T015 | HTML5 player |
-| [T017](./tickets/T017-channel-filter-favorites.md) | Channel Filter & Favorites | Pending | T013, T011 | Dropdown, toggle |
-| [T018](./tickets/T018-ingest-form.md) | Ingest Form | Pending | T008, T012 | URL submission |
+| [T012](./tickets/T012-react-vite-setup.md) | React/Vite Project Setup | Complete | T001 | Phosphor Console theme |
+| [T013](./tickets/T013-video-grid.md) | Video Grid Component | Complete | T012 | Responsive 1-4 columns |
+| [T014](./tickets/T014-thumbnail-card.md) | Thumbnail Card Component | Complete | T013 | Status overlays, RTL |
+| [T015](./tickets/T015-action-overlay.md) | Action Overlay | Complete | T014 | YouTube/Play/Download/Retry |
+| [T016](./tickets/T016-video-player-modal.md) | Video Player Modal | Complete | T015 | Keyboard shortcuts, RTL |
+| [T017](./tickets/T017-channel-filter-favorites.md) | Channel Filter & Favorites | Complete | T013, T011 | Responsive header with filters |
+| [T018](./tickets/T018-ingest-form.md) | Ingest Form | Complete | T008, T012 | Modal with validation |
 
 ---
 
@@ -150,9 +157,22 @@ T019, T020, T021 → T022
 - Channels endpoint provides channel names with counts
 - Use these for dropdown population
 
+### From T016 to T017
+- Modal.tsx is a reusable base component for all modals
+- `fetchChannels()` in api/client.ts is ready for dropdown population
+- useVideos hook accepts `channel` and `favoritesOnly` options
+
+### From T017 to T018
+- Header.tsx can be extended to include the ingest form button
+- useVideos hook has `refresh()` function for refreshing after ingest
+- Modal.tsx is reusable for the ingest form modal
+- `ingestVideo()` in api/client.ts is already implemented
+
 ### From T018 to T019
-- Ingest form should refresh video list on success
-- WebSocket will provide real-time progress
+- IngestForm.tsx calls refresh() on success to update video list
+- Video cards already have ProgressOverlay component ready for real-time updates
+- useVideos hook can be extended for WebSocket subscription
+- Download progress is stored in video.download_progress field
 
 ---
 

@@ -249,15 +249,15 @@ import { CompactIngestForm } from './IngestForm'
 
 ## 3. Implementation Verification
 
-- [ ] Form accepts YouTube URLs
-- [ ] Client-side validation for URL format
-- [ ] Loading state shown during submission
-- [ ] Success state with checkmark icon
-- [ ] Error state with message
-- [ ] Video list refreshes after successful add
-- [ ] Form clears after successful submission
-- [ ] Button disabled when input is empty
-- [ ] Form is responsive (stacks on mobile)
+- [x] Form accepts YouTube URLs
+- [x] Client-side validation for URL format
+- [x] Loading state shown during submission
+- [x] Success state with checkmark icon
+- [x] Error state with message
+- [x] Video list refreshes after successful add
+- [x] Form clears after successful submission
+- [x] Button disabled when input is empty
+- [x] Form is responsive (stacks on mobile)
 
 ### Tests to Write
 
@@ -345,15 +345,23 @@ npm run dev
 
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
+| 2024-12-29 | Created IngestForm.tsx | Success | Phosphor Console styled with validation |
+| 2024-12-29 | Updated Header.tsx with Add Video button | Success | Desktop + compact mobile versions |
+| 2024-12-29 | Updated App.tsx with ingest modal | Success | Modal reuse from T016, auto-refresh on success |
+| 2024-12-29 | Verified build | Success | dist: 172KB JS, 20KB CSS |
 
 ## 5. Comments
 
-- Client-side validation provides immediate feedback
-- Server errors (duplicate, unavailable) are displayed clearly
-- Success state auto-clears after 3 seconds
+- Implemented as modal (triggered from Header) instead of inline compact form
+- Uses Phosphor Console terminal styling (uppercase, term-* colors, mono font)
+- Client-side validation for YouTube URL patterns (youtube.com, youtu.be, shorts)
+- Server errors displayed in uppercase with "ERROR:" prefix
+- Success message: "VIDEO QUEUED FOR DOWNLOAD" with auto-close after 2s
 - Form clears on success to prepare for next entry
-- Loading spinner prevents double-submission
-- CompactIngestForm saves space in header
-- onSuccess callback allows parent to refresh video list
+- Loading state shows Loader2 spinner with "ADDING..." text
+- Uses lucide-react icons: Plus, Loader2, AlertCircle, CheckCircle, X
+- onSuccess callback refreshes both videos and channels lists
+- Help text shows supported URL formats
+- Modal reuses Modal.tsx component from T016
 - Phase 4 (Frontend) is complete after this ticket
-- Next ticket (T019) implements real-time WebSocket progress
+- Next ticket (T019) implements real-time WebSocket progress for downloads
