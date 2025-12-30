@@ -463,6 +463,15 @@ npm run dev
 
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
+| 2025-12-30 | Created contexts directory | New directory for ToastContext | None |
+| 2025-12-30 | Created Toast.tsx | 4 toast types (success/error/warning/info), auto-dismiss, manual dismiss | None |
+| 2025-12-30 | Created ToastContainer.tsx | Fixed bottom-right (bottom-12 above footer), stacks toasts | None |
+| 2025-12-30 | Created ToastContext.tsx | ToastProvider, useToast hook, convenience methods (success/error/info/warning) | None |
+| 2025-12-30 | Created useToast.ts re-export | Simple re-export hook for cleaner imports | None |
+| 2025-12-30 | Added slide-in animation | @keyframes slide-in in index.css utilities layer | None |
+| 2025-12-30 | Integrated into App.tsx | Wrapped with ToastProvider, created AppContent component, added toasts for ingest/delete/retry | None |
+| 2025-12-30 | Added mobile polish CSS | pb-safe, tap-highlight-color, user-select, min-h-screen-mobile, touch-target class | None |
+| 2025-12-30 | Build verification | Build passed (182.75 kB JS gzipped to 56.56 kB) | None |
 
 ## 5. Comments
 

@@ -49,6 +49,9 @@ services:
         VITE_API_URL: http://localhost:8000
     ports:
       - "3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
 
   postgres:
     image: postgres:16-alpine

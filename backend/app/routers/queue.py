@@ -10,9 +10,12 @@ async def queue_status():
     """Get current queue depth and active job count."""
     redis = await get_redis()
 
-    # ARQ stores jobs in specific keys
-    pending = await redis.llen("arq:queue")
-    processing = await redis.scard("arq:in-progress")
+    # ARQ uses sorted set (zset) for queue
+    pending = await redis.zcard("arq:queue")
+
+    # Count in-progress jobs by finding arq:in-progress:* keys
+    in_progress_keys = await redis.keys("arq:in-progress:*")
+    processing = len(in_progress_keys)
 
     return {
         "pending": pending,

@@ -348,6 +348,12 @@ npm run dev
 
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
+| 2025-12-30 | Created useQueueStatus.ts hook | Polling every 5s, returns pending/processing/total/loading/error/refresh | None |
+| 2025-12-30 | Created QueueStatus.tsx | Both QueueStatusCompact (header) and QueueStatus (full) variants | None |
+| 2025-12-30 | Integrated into Header.tsx | Added QueueStatusCompact next to logo, shows pulsing blue dot when active | None |
+| 2025-12-30 | Mobile support | Added queue status to mobile header row | None |
+| 2025-12-30 | Styled with Phosphor Console theme | term-* colors, lucide-react icons (Loader2, Clock, CheckCircle), uppercase text | None |
+| 2025-12-30 | Build verification | Build passed | None |
 
 ## 5. Comments
 

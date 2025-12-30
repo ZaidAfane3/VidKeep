@@ -1,6 +1,6 @@
 # VidKeep Frontend Manual Testing Checklist
 
-**Phase 4 Frontend Testing Guide**
+**Phase 4 & Phase 5 Frontend Testing Guide**
 
 Use this checklist to verify all frontend features are working correctly.
 
@@ -281,6 +281,163 @@ Frontend should be available at: http://localhost:3000
 
 ---
 
+## T019: WebSocket Progress Updates
+
+### WebSocket Connection
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 1 | Page load | WebSocket connects (check Network > WS tab) | ✅ |
+| 2 | Footer indicator | Shows "LIVE" in green when connected | ✅ |
+| 3 | Disconnect backend | Shows "RECONNECTING" in yellow (pulsing) | ✅ |
+| 4 | Reconnect | Auto-reconnects after ~5 seconds | ✅ |
+
+### Real-time Progress
+
+**Known Issue:** [BUG-001](./tickets/BUG-001-websocket-multiple-connections.md) - Multiple WebSocket connections appear in development due to React StrictMode. This is a dev-only issue and does not affect production.
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 5 | Ingest new video | Progress updates in real-time on card | ✅ |
+| 6 | Progress circle | Animates smoothly as download progresses | ✅ |
+| 7 | Multiple downloads | Each video shows independent progress | ☐ |
+| 8 | Download complete | Progress clears, status changes to complete | ☐ |
+
+### Multi-tab Behavior
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 9 | Open second tab | Both tabs show progress updates | ✅ |
+| 10 | Close first tab | Second tab continues receiving updates | ✅ |
+
+---
+
+## T020: Delete Confirmation Modal
+
+### Modal Opening
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 1 | Click delete icon on card | Confirmation modal opens | ✅ |
+| 2 | Modal title | Shows "DELETE VIDEO?" | ✅ |
+| 3 | Warning icon | Red/orange triangle warning icon visible | ✅ |
+
+### Video Details Display
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 4 | Video thumbnail | Shows thumbnail in modal | ✅ |
+| 5 | Video title | Shows video title | ✅ |
+| 6 | Channel name | Shows channel name | ✅ |
+| 7 | File size | Shows file size (e.g., "125.4 MB") | ✅ |
+
+### Modal Actions
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 8 | Click Cancel | Modal closes, video remains | ✅ |
+| 9 | Click backdrop | Modal closes, video remains | ✅ |
+| 10 | Press Escape | Modal closes, video remains | ✅ |
+| 11 | Click Delete | Loading state shown | ✅ |
+| 12 | Delete success | Modal closes, video removed from grid | ✅ |
+| 13 | Delete success toast | Success toast appears | ✅ |
+
+### Error Handling
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 14 | Delete API error | Error message shown in modal | ✅ |
+| 15 | Can retry after error | Delete button still clickable | ✅ |
+
+
+---
+
+## T021: Queue Status Indicator
+
+### Header Display
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 1 | Queue empty | No indicator visible (or "QUEUE EMPTY") | ✅ |
+| 2 | Videos queued | Shows pulsing blue dot + "X queued" | ✅ |
+| 3 | Videos downloading | Shows "X downloading" text | ✅ |
+| 4 | Desktop position | Next to logo in header | ✅ |
+| 5 | Mobile position | In mobile header row | ✅ |
+
+### Status Updates
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 6 | Ingest video | Count increases | ✅ |
+| 7 | Download completes | Count decreases | ✅ |
+| 8 | Poll interval | Updates every ~5 seconds | ✅ |
+
+### Animation
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 9 | Active indicator | Blue dot pulses/pings when active | ✅ |
+| 10 | Loading state | Spinner shown during initial fetch | ✅ |
+
+---
+
+## T022: Toast Notifications
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 1 | Toast position | Fixed bottom-right, above footer | ☐ |
+| 2 | Success toast | Green icon, title, optional message | ☐ |
+| 3 | Error toast | Red icon, title, optional message | ☐ |
+| 4 | Warning toast | Yellow icon, title, optional message | ☐ |
+| 5 | Info toast | Blue icon, title, optional message | ☐ |
+| 6 | Ingest success | "Video queued" success toast | ✅ |
+| 7 | Delete success | "Video deleted" success toast | ✅ |
+| 8 | Retry success | "Retry queued" success toast | ☐ |
+| 9 | Delete error | Error toast with message | ☐ |
+| 10 | Retry error | Error toast with message | ☐ |
+| 11 | Auto-dismiss | Toast disappears after ~5 seconds | ✅ |
+| 12 | Error duration | Error toasts last longer (~8 seconds) | ☐ |
+| 13 | Manual dismiss | Click X to close immediately | ☐ |
+| 14 | Multiple toasts | Stack vertically | ☐ |
+| 15 | Slide animation | Toast slides in from right | ☐ |
+| 16 | Mobile position | Full width with padding | ☐ |
+| 17 | Mobile dismiss | X button is touch-friendly (44px) | ☐ |
+
+---
+
+## T022: Mobile Polish
+
+### Touch Targets
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 1 | Button touch areas | Minimum 44px tap targets | ✅ |
+| 2 | Icon buttons | Easy to tap without misclicks | ✅ |
+
+### Mobile Layout
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 3 | Header mobile | Stacks properly, no overflow | ✅ |
+| 4 | Filters mobile | Scroll horizontally if needed | ✅ |
+| 5 | No horizontal scroll | Page doesn't scroll horizontally | ✅ |
+
+### iOS Safe Areas
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 6 | iPhone notch | Content doesn't hide behind notch | ☐ |
+| 7 | Home indicator | Footer respects safe area | ☐ |
+
+### Touch Feedback
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 8 | Tap highlight | No blue/gray highlight on tap | ☐ |
+| 9 | Button selection | Buttons don't show text selection | ☐ |
+
+---
+
 ## Error Handling
 
 | # | Test | Expected Result | Pass |
@@ -317,6 +474,8 @@ Frontend should be available at: http://localhost:3000
 
 ## Test Summary
 
+### Phase 4 Tests (Complete)
+
 | Section | Total | Passed | Failed | Pending |
 |---------|-------|--------|--------|---------|
 | T012: Setup | 7 | 7 | 0 | 0 |
@@ -329,21 +488,46 @@ Frontend should be available at: http://localhost:3000
 | Error Handling | 3 | 3 | 0 | 0 |
 | Performance | 4 | 4 | 0 | 0 |
 | Cross-Browser | 6 | 6 | 0 | 0 |
-| **TOTAL** | **126** | **126** | **0** | **0** |
+| **Phase 4 Total** | **126** | **126** | **0** | **0** |
+
+### Phase 5 Tests (In Progress)
+
+| Section | Total | Passed | Failed | Pending |
+|---------|-------|--------|--------|---------|
+| T019: WebSocket | 10 | 8 | 0 | 2 |
+| T020: Delete Modal | 15 | 15 | 0 | 0 |
+| T021: Queue Status | 10 | 10 | 0 | 0 |
+| T022: Toast System | 17 | 3 | 0 | 14 |
+| T022: Mobile Polish | 9 | 5 | 0 | 4 |
+| **Phase 5 Total** | **61** | **41** | **0** | **20** |
+
+### Overall
+
+| Phase | Total | Passed | Failed | Pending |
+|-------|-------|--------|--------|---------|
+| Phase 4 | 126 | 126 | 0 | 0 |
+| Phase 5 | 61 | 41 | 0 | 20 |
+| **TOTAL** | **187** | **167** | **0** | **20** |
 
 ### Summary Notes
 - **Phase 4 Frontend: 100% Complete** (126/126 tests passed) 🎉
-- **All Tests Passed:**
+- **Phase 5 Frontend: 67% Complete** (41/61 tests passed)
+- **All Phase 4 Tests Passed:**
   - T012-T018: All features fully functional
   - Error Handling: All scenarios handled gracefully
   - Performance: Excellent metrics
   - Cross-Browser: Works perfectly on all major browsers and devices
-- **Zero Failures** - All tested features working correctly
+- **Phase 5 Progress:**
+  - T019: WebSocket ✅ 8/10 (see [BUG-001](./tickets/BUG-001-websocket-multiple-connections.md) for dev-only issue)
+  - T020: Delete Modal ✅ 15/15 Complete!
+  - T021: Queue Status ✅ 10/10 Complete!
+  - T022: Toast System 3/17 (needs more testing)
+  - T022: Mobile Polish 5/9 (iOS safe areas untested)
 - **Quality Metrics:**
   - Initial load: ✅ < 3 seconds
-  - Bundle size: ✅ 63.5 KB gzipped (< 200 KB)
+  - Bundle size: ✅ 56.56 KB gzipped (< 200 KB)
   - Console errors: ✅ None
-  - Memory leaks: ✅ Stable (28.9 MB → 30.3 MB, no leak)
+  - Memory leaks: ✅ Stable
 
 ---
 

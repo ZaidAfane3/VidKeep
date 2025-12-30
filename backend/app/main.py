@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import health, videos, stream, channels, queue
+from app.routers import health, videos, stream, channels, queue, websocket
 
 
 @asynccontextmanager
@@ -37,6 +37,7 @@ app.include_router(videos.router)
 app.include_router(stream.router)
 app.include_router(channels.router)
 app.include_router(queue.router)
+app.include_router(websocket.router)
 
 
 @app.get("/")

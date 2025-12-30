@@ -351,6 +351,12 @@ docker-compose up api
 
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
+| 2025-12-30 | Created backend/app/routers/websocket.py | WebSocket endpoint with ConnectionManager, Redis pub/sub pattern subscription | None |
+| 2025-12-30 | Registered WebSocket router in main.py | Added import and include_router | None |
+| 2025-12-30 | Created useWebSocket.ts hook | Auto-connect, reconnect, ping/pong keepalive implemented | None |
+| 2025-12-30 | Created useDownloadProgress.ts hook | Progress state management with clearProgress utility | None |
+| 2025-12-30 | Integrated into App.tsx | Added videosWithProgress merge with useMemo, WS connection indicator in footer | TypeScript error TS6133 for unused wsConnected - fixed by adding footer indicator |
+| 2025-12-30 | Build verification | Build passed (182.75 kB JS gzipped to 56.56 kB) | None |
 
 ## 5. Comments
 

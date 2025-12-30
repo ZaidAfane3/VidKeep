@@ -6,11 +6,17 @@ import VideoGridSkeleton from './components/VideoGridSkeleton'
 import VideoPlayerModal from './components/VideoPlayerModal'
 import Modal from './components/Modal'
 import IngestForm from './components/IngestForm'
+import DeleteConfirmModal from './components/DeleteConfirmModal'
+import ToastContainer from './components/ToastContainer'
+import { ToastProvider, useToast } from './contexts/ToastContext'
 import { useVideos } from './hooks/useVideos'
 import { useChannels } from './hooks/useChannels'
+import { useDownloadProgress } from './hooks/useDownloadProgress'
 import type { Video } from './api/types'
 
-function App() {
+function AppContent() {
+  const { toasts, removeToast, success, error: showError } = useToast()
+
   // Filter state
   const [selectedChannel, setSelectedChannel] = useState<string>()
   const [favoritesOnly, setFavoritesOnly] = useState(false)
@@ -21,8 +27,14 @@ function App() {
   // Ingest modal state
   const [showIngestModal, setShowIngestModal] = useState(false)
 
+  // Delete confirmation modal state
+  const [deletingVideo, setDeletingVideo] = useState<Video | null>(null)
+
   // Fetch channels for filter dropdown
   const { channels, loading: channelsLoading, refresh: refreshChannels } = useChannels()
+
+  // WebSocket download progress
+  const { progress: downloadProgress, isConnected: wsConnected } = useDownloadProgress()
 
   // Fetch videos with filter options
   const {
@@ -37,6 +49,14 @@ function App() {
     channel: selectedChannel,
     favoritesOnly
   })
+
+  // Merge WebSocket progress into videos
+  const videosWithProgress = useMemo(() => {
+    return videos.map(video => ({
+      ...video,
+      download_progress: downloadProgress[video.video_id]?.percent ?? video.download_progress
+    }))
+  }, [videos, downloadProgress])
 
   // Count favorites from current video list
   const favoritesCount = useMemo(() => {
@@ -64,6 +84,9 @@ function App() {
     refresh()
     refreshChannels()
 
+    // Show success toast
+    success('Video queued', 'Download will start shortly')
+
     // Close modal after 2 seconds to show success message
     setTimeout(() => {
       setShowIngestModal(false)
@@ -72,6 +95,38 @@ function App() {
 
   const handleCloseIngestModal = () => {
     setShowIngestModal(false)
+  }
+
+  // Delete confirmation handlers
+  const handleDeleteClick = (videoId: string) => {
+    const video = videos.find(v => v.video_id === videoId)
+    if (video) {
+      setDeletingVideo(video)
+    }
+  }
+
+  const handleDeleteConfirm = async (videoId: string) => {
+    try {
+      await deleteVideo(videoId)
+      success('Video deleted', 'Video and files removed')
+    } catch (err) {
+      showError('Delete failed', err instanceof Error ? err.message : 'Failed to delete video')
+      throw err // Re-throw to let modal handle it
+    }
+  }
+
+  const handleCloseDeleteModal = () => {
+    setDeletingVideo(null)
+  }
+
+  // Retry handler with toast
+  const handleRetry = async (videoId: string) => {
+    try {
+      await retryVideo(videoId)
+      success('Retry queued', 'Download will restart shortly')
+    } catch (err) {
+      showError('Retry failed', err instanceof Error ? err.message : 'Failed to retry download')
+    }
   }
 
   return (
@@ -88,7 +143,7 @@ function App() {
         favoritesOnly={favoritesOnly}
         onFavoritesToggle={handleFavoritesToggle}
         favoritesCount={favoritesCount}
-        totalVideos={videos.length}
+        totalVideos={videosWithProgress.length}
         onAddVideoClick={handleAddVideoClick}
       />
 
@@ -116,11 +171,11 @@ function App() {
           <VideoGridSkeleton />
         ) : (
           <VideoGrid
-            videos={videos}
+            videos={videosWithProgress}
             onFavoriteToggle={toggleFavorite}
-            onDelete={deleteVideo}
+            onDelete={handleDeleteClick}
             onPlay={handlePlay}
-            onRetry={retryVideo}
+            onRetry={handleRetry}
           />
         )}
       </main>
@@ -131,9 +186,16 @@ function App() {
           <span className="text-mono text-term-primary/40 uppercase">
             VidKeep v1.0.0
           </span>
-          <span className="text-mono text-term-primary/40 uppercase">
-            &lt;/TERMINAL&gt;
-          </span>
+          <div className="flex items-center gap-4">
+            {/* WebSocket connection status */}
+            <span className={`text-mono uppercase flex items-center gap-1 ${wsConnected ? 'text-term-success/60' : 'text-term-warning/60'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-term-success' : 'bg-term-warning animate-pulse'}`} />
+              {wsConnected ? 'LIVE' : 'RECONNECTING'}
+            </span>
+            <span className="text-mono text-term-primary/40 uppercase">
+              &lt;/TERMINAL&gt;
+            </span>
+          </div>
         </div>
       </footer>
 
@@ -156,7 +218,26 @@ function App() {
           />
         </div>
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        video={deletingVideo}
+        isOpen={deletingVideo !== null}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleDeleteConfirm}
+      />
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
     </div>
+  )
+}
+
+function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   )
 }
 

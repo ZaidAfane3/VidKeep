@@ -239,6 +239,22 @@
 
 /* ---------- UTILITY LAYER ---------- */
 @layer utilities {
+  /* Toast Slide-in Animation */
+  @keyframes slide-in {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .animate-slide-in {
+    animation: slide-in 0.3s ease-out;
+  }
+
   /* RTL Support */
   [dir="rtl"] {
     text-align: right;
@@ -263,5 +279,34 @@
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Safe area for iOS notch/home indicator */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  /* Better tap highlight */
+  button, a, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent text selection on buttons */
+  button, [role="button"] {
+    user-select: none;
+  }
+
+  /* Full height on mobile (handle iOS address bar) */
+  .min-h-screen-mobile {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}
+
+/* Touch-friendly targets (44px minimum) */
+@media (max-width: 640px) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
   }
 }

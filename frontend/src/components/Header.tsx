@@ -1,6 +1,8 @@
 import { X, Plus } from 'lucide-react'
 import ChannelFilter from './ChannelFilter'
 import FavoritesToggle from './FavoritesToggle'
+import { QueueStatusCompact } from './QueueStatus'
+import { useQueueStatus } from '../hooks/useQueueStatus'
 import type { Channel } from '../api/types'
 
 interface HeaderProps {
@@ -26,6 +28,7 @@ export default function Header({
   totalVideos,
   onAddVideoClick
 }: HeaderProps) {
+  const { pending, processing, loading: queueLoading } = useQueueStatus()
   const hasActiveFilters = selectedChannel || favoritesOnly
 
   const clearFilters = () => {
@@ -38,13 +41,24 @@ export default function Header({
       <div className="max-w-[1440px] mx-auto px-4">
         {/* Main Header Row */}
         <div className="h-16 flex items-center justify-between">
-          {/* Logo: ">_ VIDKEEP" with blinking underscore */}
-          <div className="flex items-center text-glow">
-            <h1 className="text-heading text-term-primary font-bold uppercase tracking-wider">
-              <span className="text-term-primary/60">&gt;</span>
-              <span className="animate-blink">_</span>
-              <span className="ml-1">VIDKEEP</span>
-            </h1>
+          {/* Logo: ">_ VIDKEEP" with blinking underscore + Queue Status */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center text-glow">
+              <h1 className="text-heading text-term-primary font-bold uppercase tracking-wider">
+                <span className="text-term-primary/60">&gt;</span>
+                <span className="animate-blink">_</span>
+                <span className="ml-1">VIDKEEP</span>
+              </h1>
+            </div>
+
+            {/* Queue Status (Desktop) */}
+            <div className="hidden md:block">
+              <QueueStatusCompact
+                pending={pending}
+                processing={processing}
+                loading={queueLoading}
+              />
+            </div>
           </div>
 
           {/* Desktop Controls */}
@@ -98,6 +112,13 @@ export default function Header({
 
           {/* Mobile Controls */}
           <div className="flex md:hidden items-center gap-2">
+            {/* Queue Status (Mobile) */}
+            <QueueStatusCompact
+              pending={pending}
+              processing={processing}
+              loading={queueLoading}
+            />
+
             {/* Add Video Button (compact) */}
             <button
               onClick={onAddVideoClick}
