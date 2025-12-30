@@ -63,6 +63,11 @@ function App() {
     // Refresh both videos and channels after successful ingest
     refresh()
     refreshChannels()
+
+    // Close modal after 2 seconds to show success message
+    setTimeout(() => {
+      setShowIngestModal(false)
+    }, 2000)
   }
 
   const handleCloseIngestModal = () => {
@@ -148,7 +153,6 @@ function App() {
         <div className="p-4">
           <IngestForm
             onSuccess={handleIngestSuccess}
-            onClose={handleCloseIngestModal}
           />
         </div>
       </Modal>

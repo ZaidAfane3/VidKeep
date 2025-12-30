@@ -1,11 +1,10 @@
 import { useState, FormEvent } from 'react'
-import { Plus, Loader2, AlertCircle, CheckCircle, X } from 'lucide-react'
+import { Plus, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { ingestVideo } from '../api/client'
 
 interface IngestFormProps {
   onSuccess?: (videoId: string) => void
   onError?: (error: string) => void
-  onClose?: () => void
 }
 
 /**
@@ -23,7 +22,7 @@ function isValidYouTubeUrl(url: string): boolean {
   return YOUTUBE_URL_PATTERNS.some(pattern => pattern.test(url))
 }
 
-export default function IngestForm({ onSuccess, onError, onClose }: IngestFormProps) {
+export default function IngestForm({ onSuccess, onError }: IngestFormProps) {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,10 +53,9 @@ export default function IngestForm({ onSuccess, onError, onClose }: IngestFormPr
       setUrl('')
       onSuccess?.(result.video_id)
 
-      // Clear success state after 3 seconds
+      // Clear success state after 2 seconds
       setTimeout(() => {
         setSuccess(false)
-        onClose?.()
       }, 2000)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'FAILED TO QUEUE VIDEO'
@@ -139,18 +137,6 @@ export default function IngestForm({ onSuccess, onError, onClose }: IngestFormPr
             </>
           )}
         </button>
-
-        {/* Close button (if onClose provided) */}
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 text-term-dim hover:text-term-primary transition-colors"
-            aria-label="Cancel"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
       </div>
 
       {/* Error/Success message */}

@@ -365,3 +365,10 @@ npm run dev
 - Modal reuses Modal.tsx component from T016
 - Phase 4 (Frontend) is complete after this ticket
 - Next ticket (T019) implements real-time WebSocket progress for downloads
+
+**TESTING LOG (2024-12-30):** ✅ Phase 4 Manual Testing Complete - 24/24 tests passed
+- Ingest modal: Opens/closes correctly, single close button (header X) ✅
+- URL validation: Validates all YouTube URL formats ✅
+- Form submission: Loading state, success message, auto-close after 2s ✅
+- Error handling: Shows server errors (BAD GATEWAY tested) ✅
+- Button states: Disabled when empty, enabled with valid URL ✅

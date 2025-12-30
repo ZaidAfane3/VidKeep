@@ -421,3 +421,10 @@ npm run dev
 - useChannels hook includes refresh() for updating after new video ingest
 - useVideos hook refetches when channel or favoritesOnly filters change
 - T018 adds the ingest form modal triggered from Header's Add Video button
+
+**TESTING LOG (2024-12-30):** ✅ Phase 4 Manual Testing Complete - 17/17 tests passed
+- Channel filter dropdown: Lists all channels with video counts ✅
+- Favorites toggle: Shows count badge, filters correctly ✅
+- Combined filters: Channel + Favorites work together ✅
+- Filter indicator bar: Displays active filters and Clear button ✅
+- Header responsiveness: Inline on desktop, stacked on mobile ✅

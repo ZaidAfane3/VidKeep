@@ -405,3 +405,10 @@ npm run dev
 - RTL support for title and channel name
 - `playsInline` attribute required for iOS
 - Next ticket (T017) implements channel filter and favorites
+
+**TESTING LOG (2024-12-30):** ✅ Phase 4 Manual Testing Complete - 24/24 tests passed
+- Modal open/close: All close methods work (X, backdrop, Escape) ✅
+- Video streaming: /api/stream/{id} endpoint works, native controls responsive ✅
+- Description panel: Expandable with RTL support ✅
+- Keyboard shortcuts: All 9 shortcuts (Space, K, Arrows, M, F, Escape) working ✅
+- Body scroll lock: Prevents scrolling behind modal ✅
