@@ -217,7 +217,7 @@
   }
 
   .badge-downloading {
-    @apply bg-term-primary text-black font-bold uppercase text-sm px-2 py-0.5;
+    @apply bg-term-info text-black font-bold uppercase text-sm px-2 py-0.5;
   }
 
   .badge-error {

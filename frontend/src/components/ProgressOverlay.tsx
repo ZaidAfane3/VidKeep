@@ -32,15 +32,15 @@ export default function ProgressOverlay({ progress }: ProgressOverlayProps) {
             strokeWidth="2"
             strokeDasharray={strokeDasharray}
             strokeLinecap="square"
-            className="text-term-primary transition-all duration-300"
+            className="text-term-info transition-all duration-300"
           />
         </svg>
         {/* Percentage text */}
-        <span className="absolute inset-0 flex items-center justify-center text-body font-bold text-term-primary text-glow">
+        <span className="absolute inset-0 flex items-center justify-center text-body font-bold text-term-info">
           {progress}%
         </span>
       </div>
-      <p className="text-mono text-term-primary/60 mt-2 uppercase tracking-wider">
+      <p className="text-mono text-term-info/80 mt-2 uppercase tracking-wider">
         Downloading...
       </p>
     </div>

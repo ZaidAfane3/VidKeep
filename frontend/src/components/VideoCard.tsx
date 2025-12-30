@@ -1,8 +1,7 @@
-import { useState } from 'react'
-import { Heart, Youtube, Play, Download, RefreshCw, Loader2 } from 'lucide-react'
+import { useRef } from 'react'
+import { Heart, Youtube, Play, Download, RefreshCw, Loader2, Trash2 } from 'lucide-react'
 import type { Video } from '../api/types'
 import { getThumbnailUrl, getStreamUrl } from '../api/client'
-import StatusBadge from './StatusBadge'
 import ProgressOverlay from './ProgressOverlay'
 import ActionButton from './ActionButton'
 import { formatDuration, formatFileSize } from '../utils/format'
@@ -13,15 +12,24 @@ interface VideoCardProps {
   onDelete: (videoId: string) => void
   onPlay: (video: Video) => void
   onRetry?: (videoId: string) => void
+  isOverlayActive?: boolean
+  onOverlayActivate?: () => void
 }
+
+// Threshold in pixels - if touch moves more than this, it's a swipe not a tap
+const SWIPE_THRESHOLD = 10
 
 export default function VideoCard({
   video,
   onFavoriteToggle,
+  onDelete,
   onPlay,
-  onRetry
+  onRetry,
+  isOverlayActive = false,
+  onOverlayActivate
 }: VideoCardProps) {
-  const [showOverlay, setShowOverlay] = useState(false)
+  // Track touch start position to differentiate tap from swipe
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 
   const thumbnailUrl = getThumbnailUrl(video.video_id)
   const isComplete = video.status === 'complete'
@@ -54,11 +62,37 @@ export default function VideoCard({
     onRetry?.(video.video_id)
   }
 
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onDelete(video.video_id)
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0]
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return
+
+    const touch = e.changedTouches[0]
+    const deltaX = Math.abs(touch.clientX - touchStartRef.current.x)
+    const deltaY = Math.abs(touch.clientY - touchStartRef.current.y)
+
+    // Only activate overlay if it was a tap (not a swipe)
+    if (deltaX < SWIPE_THRESHOLD && deltaY < SWIPE_THRESHOLD) {
+      onOverlayActivate?.()
+    }
+
+    touchStartRef.current = null
+  }
+
   return (
     <div
-      className="card-terminal overflow-hidden group relative"
-      onTouchStart={() => setShowOverlay(true)}
-      onTouchEnd={() => setTimeout(() => setShowOverlay(false), 3000)}
+      data-video-card
+      className={`card-terminal overflow-hidden group relative ${isPending ? 'border-term-warning' : ''} ${isDownloading ? 'border-term-info' : ''} ${isFailed ? 'border-term-error' : ''}`}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Thumbnail container */}
       <div className="relative aspect-video bg-term-dark">
@@ -77,12 +111,7 @@ export default function VideoCard({
           <ProgressOverlay progress={video.download_progress || 0} />
         )}
 
-        {/* Status badge (top-left) */}
-        {!isComplete && (
-          <div className="absolute top-2 left-2 z-10">
-            <StatusBadge status={video.status} />
-          </div>
-        )}
+        {/* Status badges removed - status indicated by card border color */}
 
         {/* Duration badge (bottom-right) - Phosphor Console style */}
         {isComplete && video.duration_seconds && (
@@ -115,12 +144,12 @@ export default function VideoCard({
         <div
           className={`
             absolute inset-0 bg-term-bg/90
-            ${showOverlay ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+            ${isOverlayActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
             transition-opacity duration-200 flex items-center justify-center
             ${isDownloading ? 'pointer-events-none opacity-0' : ''}
           `}
         >
-          {/* Complete: Show YouTube, Play, Download buttons */}
+          {/* Complete: Show YouTube, Play, Download, Delete buttons */}
           {isComplete && (
             <div className="flex items-center gap-4">
               <ActionButton
@@ -138,10 +167,16 @@ export default function VideoCard({
                 icon={<Download className="w-5 h-5" />}
                 label="Download"
               />
+              <ActionButton
+                onClick={handleDelete}
+                icon={<Trash2 className="w-5 h-5" />}
+                label="Delete"
+                variant="danger"
+              />
             </div>
           )}
 
-          {/* Failed: Show Retry button */}
+          {/* Failed: Show Retry and Delete buttons */}
           {isFailed && (
             <div className="flex items-center gap-4">
               <ActionButton
@@ -153,6 +188,12 @@ export default function VideoCard({
                 onClick={handleRetry}
                 icon={<RefreshCw className="w-5 h-5" />}
                 label="Retry"
+                variant="danger"
+              />
+              <ActionButton
+                onClick={handleDelete}
+                icon={<Trash2 className="w-5 h-5" />}
+                label="Delete"
                 variant="danger"
               />
             </div>
@@ -172,16 +213,18 @@ export default function VideoCard({
 
       {/* Card content - fixed height for consistency */}
       <div className="p-3 border-t border-term-dim h-[7.5rem] flex flex-col">
-        {/* Title with RTL support - fixed 2-line height */}
-        <h3
-          dir="auto"
-          className="text-h3 text-term-primary line-clamp-2 mb-1 text-glow min-h-[2.5rem]"
-          title={video.title}
-        >
-          {video.title}
-        </h3>
+        {/* Title with RTL support - fixed 2-line height container */}
+        <div className="h-[3rem] mb-1">
+          <h3
+            dir="auto"
+            className="text-h3 text-term-primary line-clamp-2 text-glow"
+            title={video.title}
+          >
+            {video.title}
+          </h3>
+        </div>
 
-        {/* Channel name */}
+        {/* Channel name - always aligned */}
         <p
           dir="auto"
           className="text-mono text-term-primary/60 line-clamp-1 uppercase"
@@ -199,17 +242,18 @@ export default function VideoCard({
           )}
 
           {/* Error message (for failed videos) */}
-          {isFailed && video.error_message && (
-            <p className="text-mono text-term-error line-clamp-1" title={video.error_message}>
-              ERROR: {video.error_message}
+          {isFailed && (
+            <p className="text-mono text-term-error line-clamp-1" title={video.error_message || 'Download failed'}>
+              {video.error_message ? `ERROR: ${video.error_message}` : 'FAILED'}
             </p>
           )}
 
-          {/* Spacer for pending/downloading to maintain height */}
-          {(isPending || isDownloading) && (
-            <p className="text-mono text-term-dim">
-              {isDownloading ? 'DOWNLOADING...' : 'QUEUED'}
-            </p>
+          {/* Status text for pending/downloading */}
+          {isPending && (
+            <p className="text-mono text-term-warning">QUEUED</p>
+          )}
+          {isDownloading && (
+            <p className="text-mono text-term-info">DOWNLOADING...</p>
           )}
         </div>
       </div>

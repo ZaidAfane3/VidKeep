@@ -133,6 +133,7 @@ export async function fetchQueueStatus(): Promise<QueueStatus> {
   return handleResponse<QueueStatus>(response)
 }
 
+
 /**
  * Get stream URL for a video
  * @note Not a fetch, just URL construction for <video> src

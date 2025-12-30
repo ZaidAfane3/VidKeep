@@ -60,28 +60,33 @@ Frontend should be available at: http://localhost:3000
 
 | # | Test | Expected Result | Pass |
 |---|------|-----------------|------|
-| 1 | Complete video | Thumbnail displays correctly | ☐ |
-| 2 | Duration badge | Duration shown in bottom-right (e.g., "5:32") | ☐ |
-| 3 | Video title | Title displayed below thumbnail (truncated if long) | ☐ |
-| 4 | Channel name | Channel name displayed in dim text | ☐ |
-| 5 | RTL title (Hebrew/Arabic) | Text aligns correctly right-to-left | ☐ |
+| 1 | Complete video | Thumbnail displays correctly | ✅ |
+| 2 | Duration badge | Duration shown in bottom-right (e.g., "5:32") | ✅ |
+| 3 | Video title | Title displayed below thumbnail (truncated if long) | ✅ |
+| 4 | Channel name | Channel name displayed in dim text | ✅ |
+| 5 | RTL title (Hebrew/Arabic) | Text aligns correctly right-to-left | ✅ |
 
 ### Status Badges
 
 | # | Test | Expected Result | Pass |
 |---|------|-----------------|------|
-| 6 | Pending video | Yellow "PENDING" badge | ☐ |
-| 7 | Downloading video | Blue "DOWNLOADING" badge with progress | ☐ |
-| 8 | Failed video | Red "FAILED" badge | ☐ |
-| 9 | Complete video | No status badge (clean thumbnail) | ☐ |
+| 6 | Pending video | Yellow border and "QUEUED" text (no badge) | ✅ |
+| 7 | Downloading video | Cyan border, progress circle, and text (no badge) | ✅ |
+| 8 | Failed video | Red border and error text (no badge) | ✅ |
+| 9 | Complete video | No status badge (clean thumbnail) | ✅ |
 
 ### Progress Overlay
 
 | # | Test | Expected Result | Pass |
 |---|------|-----------------|------|
-| 10 | Downloading 0% | Circular progress at 0% | ☐ |
-| 11 | Downloading 50% | Circular progress at 50% | ☐ |
-| 12 | Downloading 100% | Progress completes, status changes | ☐ |
+| 10 | Downloading 0% | Circular progress at 0% | ✅ |
+| 11 | Downloading 50% | Circular progress at 50% | ✅ |
+| 12 | Downloading 100% | Progress completes, status changes | ✅ |
+
+**T014 Notes:**
+- Fixed channel name alignment - wrapped title in fixed height container `h-[3rem]` so channel names always align across cards regardless of title length.
+- Redesigned status indicators: removed all badges, replaced with colored card borders (pending=yellow, downloading=cyan, failed=red) and status text at bottom of card.
+- Added `term-info: #00d4ff` cyan color for downloading state.
 
 ---
 
@@ -91,35 +96,37 @@ Frontend should be available at: http://localhost:3000
 
 | # | Test | Expected Result | Pass |
 |---|------|-----------------|------|
-| 1 | Hover on video card | Action overlay fades in | ☐ |
-| 2 | Move mouse away | Action overlay fades out | ☐ |
-| 3 | Overlay background | Semi-transparent dark overlay | ☐ |
+| 1 | Hover on video card | Action overlay fades in | ✅ |
+| 2 | Move mouse away | Action overlay fades out | ✅ |
+| 3 | Overlay background | Semi-transparent dark overlay | ✅ |
 
 ### Touch Behavior (Mobile)
 
 | # | Test | Expected Result | Pass |
 |---|------|-----------------|------|
-| 4 | Tap on video card | Action overlay appears | ☐ |
-| 5 | Tap outside | Action overlay hides | ☐ |
-| 6 | Tap action button | Action executes, overlay hides | ☐ |
+| 4 | Tap on video card | Action overlay appears | ✅ |
+| 5 | Tap outside | Action overlay hides | ✅ |
+| 6 | Tap action button | Action executes, overlay hides | ✅ |
+
+**T015 Touch Notes:** Fixed swipe vs tap detection - overlay only shows on actual taps (movement < 10px), not during scroll/swipe gestures.
 
 ### Action Buttons (Complete Video)
 
 | # | Test | Expected Result | Pass |
 |---|------|-----------------|------|
-| 7 | YouTube button | Opens YouTube video in new tab | ☐ |
-| 8 | Play button | Opens video player modal | ☐ |
-| 9 | Download button | Downloads MP4 file | ☐ |
-| 10 | Favorite button (not favorited) | Heart outline, toggles to filled | ☐ |
-| 11 | Favorite button (favorited) | Heart filled red, toggles to outline | ☐ |
-| 12 | Delete button | Deletes video from list | ☐ |
+| 7 | YouTube button | Opens YouTube video in new tab | ✅ |
+| 8 | Play button | Opens video player modal | ✅ |
+| 9 | Download button | Downloads MP4 file | ✅ |
+| 10 | Favorite button (not favorited) | Heart outline, toggles to filled | ✅ |
+| 11 | Favorite button (favorited) | Heart filled red, toggles to outline | ✅ |
+| 12 | Delete button | Deletes video from list | ✅ |
 
 ### Action Buttons (Failed Video)
 
 | # | Test | Expected Result | Pass |
 |---|------|-----------------|------|
-| 13 | Retry button visible | Shows retry icon instead of play | ☐ |
-| 14 | Click Retry | Re-queues video for download | ☐ |
+| 13 | Retry button visible | Shows retry icon instead of play | ✅ |
+| 14 | Click Retry | Re-queues video for download | ✅ |
 
 ### Action Buttons (Pending/Downloading)
 

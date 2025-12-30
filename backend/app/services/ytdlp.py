@@ -78,6 +78,23 @@ class YTDLPService:
     def get_thumbnail_path(self, video_id: str) -> Path:
         return self.thumbnails_path / f"{video_id}.jpg"
 
+    def cleanup_partial_files(self, video_id: str) -> None:
+        """Remove partial download files (.part, .ytdl, temp files) for a video"""
+        patterns = [
+            f"{video_id}.mp4.part",
+            f"{video_id}.mp4.part-*",
+            f"{video_id}.f*.mp4",
+            f"{video_id}.f*.m4a",
+            f"{video_id}.*.ytdl",
+            f"{video_id}.temp.*",
+        ]
+        for pattern in patterns:
+            for file in self.videos_path.glob(pattern):
+                try:
+                    file.unlink()
+                except OSError:
+                    pass
+
 
 def extract_metadata(info: dict) -> dict:
     """

@@ -22,6 +22,9 @@ async def download_video(ctx, video_id: str, url: str):
     # Capture the event loop for use in sync callback
     loop = asyncio.get_running_loop()
 
+    # Clean up any partial files from previous attempts (for retries)
+    ytdlp.cleanup_partial_files(video_id)
+
     # Update status to downloading
     async with async_session() as db:
         video = await db.get(Video, video_id)

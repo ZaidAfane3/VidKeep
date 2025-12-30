@@ -31,7 +31,8 @@ function App() {
     error,
     refresh,
     toggleFavorite,
-    deleteVideo
+    deleteVideo,
+    retryVideo
   } = useVideos({
     channel: selectedChannel,
     favoritesOnly
@@ -114,6 +115,7 @@ function App() {
             onFavoriteToggle={toggleFavorite}
             onDelete={deleteVideo}
             onPlay={handlePlay}
+            onRetry={retryVideo}
           />
         )}
       </main>

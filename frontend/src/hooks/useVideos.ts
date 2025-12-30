@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Video } from '../api/types'
-import { fetchVideos, updateVideoFavorite, deleteVideo as apiDeleteVideo } from '../api/client'
+import { fetchVideos, updateVideoFavorite, deleteVideo as apiDeleteVideo, ingestVideo } from '../api/client'
 
 interface UseVideosOptions {
   channel?: string
@@ -75,6 +75,35 @@ export function useVideos(options: UseVideosOptions = {}) {
     )
   }, [])
 
+  const retryVideo = useCallback(async (videoId: string) => {
+    // Find the video to get its youtube_url
+    const video = videos.find(v => v.video_id === videoId)
+    if (!video?.youtube_url) {
+      console.error('Cannot retry: video or youtube_url not found')
+      return
+    }
+
+    // Optimistic update - set status to pending
+    setVideos(prev =>
+      prev.map(v =>
+        v.video_id === videoId ? { ...v, status: 'pending' as const, error_message: null } : v
+      )
+    )
+
+    try {
+      // Re-ingest the video (backend handles retry for failed videos)
+      await ingestVideo(video.youtube_url)
+    } catch (err) {
+      // Revert on error
+      setVideos(prev =>
+        prev.map(v =>
+          v.video_id === videoId ? { ...v, status: 'failed' as const } : v
+        )
+      )
+      console.error('Failed to retry video:', err)
+    }
+  }, [videos])
+
   return {
     videos,
     loading,
@@ -83,6 +112,7 @@ export function useVideos(options: UseVideosOptions = {}) {
     toggleFavorite,
     deleteVideo,
     addVideo,
-    updateVideo
+    updateVideo,
+    retryVideo
   }
 }

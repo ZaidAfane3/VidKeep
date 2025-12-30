@@ -16,6 +16,7 @@ export default {
           'dark': '#001a05',      // Dark Green - Highlighted section backgrounds
           'error': '#cc0000',     // Retro Red - Errors, delete actions
           'warning': '#d69e00',   // Amber - Warnings, pending states
+          'info': '#00d4ff',      // Cyan - Info, downloading states
         }
       },
       fontFamily: {
