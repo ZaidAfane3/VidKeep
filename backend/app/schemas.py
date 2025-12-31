@@ -9,6 +9,13 @@ class VideoStatus(str, Enum):
     downloading = "downloading"
     complete = "complete"
     failed = "failed"
+    cancelled = "cancelled"
+
+
+class CancelResponse(BaseModel):
+    video_id: str
+    status: str
+    message: str
 
 
 class VideoBase(BaseModel):

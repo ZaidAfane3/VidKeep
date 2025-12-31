@@ -1,8 +1,9 @@
-import { X, Plus } from 'lucide-react'
+import { X, Plus, Wifi, WifiOff } from 'lucide-react'
 import ChannelFilter from './ChannelFilter'
 import FavoritesToggle from './FavoritesToggle'
 import { QueueStatusCompact } from './QueueStatus'
 import { useQueueStatus } from '../hooks/useQueueStatus'
+import { useDataSaver } from '../contexts/DataSaverContext'
 import type { Channel } from '../api/types'
 
 interface HeaderProps {
@@ -28,8 +29,21 @@ export default function Header({
   totalVideos,
   onAddVideoClick
 }: HeaderProps) {
-  const { pending, processing, loading: queueLoading } = useQueueStatus()
+  const { mode, isActive: dataSaverActive, setMode } = useDataSaver()
+
+  // Adjust queue polling based on data saver
+  const { pending, processing, loading: queueLoading } = useQueueStatus({
+    pollInterval: dataSaverActive ? 60000 : 10000  // 60s vs 10s
+  })
+
   const hasActiveFilters = selectedChannel || favoritesOnly
+
+  // Cycle through data saver modes
+  const toggleDataSaver = () => {
+    if (mode === 'auto') setMode('on')
+    else if (mode === 'on') setMode('off')
+    else setMode('auto')
+  }
 
   const clearFilters = () => {
     onChannelSelect(undefined)
@@ -108,6 +122,25 @@ export default function Header({
             <span className="text-mono text-term-primary/60 uppercase ml-2">
               [ {totalVideos} VIDEOS ]
             </span>
+
+            {/* Data Saver Toggle */}
+            <button
+              onClick={toggleDataSaver}
+              className={`flex items-center gap-1 px-2 py-1 border transition-colors text-mono text-xs uppercase ${
+                dataSaverActive
+                  ? 'text-term-warning border-term-warning'
+                  : 'text-term-primary/40 border-term-dim hover:text-term-primary hover:border-term-primary'
+              }`}
+              title={`Click to change mode. Current: ${mode.toUpperCase()}${dataSaverActive ? ' (Active - slower polling)' : ''}`}
+              aria-label={`Data saver ${mode}, click to change`}
+            >
+              {dataSaverActive ? (
+                <WifiOff className="w-3 h-3" />
+              ) : (
+                <Wifi className="w-3 h-3" />
+              )}
+              <span>{mode}</span>
+            </button>
           </div>
 
           {/* Mobile Controls */}
@@ -132,6 +165,25 @@ export default function Header({
             <span className="text-mono text-term-primary/60 uppercase text-sm">
               [ {totalVideos} ]
             </span>
+
+            {/* Data Saver Toggle (Mobile) */}
+            <button
+              onClick={toggleDataSaver}
+              className={`flex items-center gap-1 px-1.5 py-1 border transition-colors text-mono text-xs uppercase ${
+                dataSaverActive
+                  ? 'text-term-warning border-term-warning'
+                  : 'text-term-primary/40 border-term-dim'
+              }`}
+              title={`Data Saver: ${mode.toUpperCase()}`}
+              aria-label={`Data saver ${mode}`}
+            >
+              {dataSaverActive ? (
+                <WifiOff className="w-3 h-3" />
+              ) : (
+                <Wifi className="w-3 h-3" />
+              )}
+              <span>{mode}</span>
+            </button>
           </div>
         </div>
 

@@ -4,7 +4,7 @@
 
 **Type:** Bug (Development Environment)
 **Severity:** Low
-**Status:** Open
+**Status:** Complete
 
 In development mode, multiple WebSocket connections are created when the app loads, causing:
 1. One WebSocket shows "finished: WebSocket is closed before the connection is established"
@@ -108,3 +108,4 @@ After fix:
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
 | 2025-12-30 | Bug identified during Phase 5 testing | Multiple WS connections observed | Root cause: React StrictMode double-mounting |
+| 2025-12-31 | Implemented singleton WebSocket pattern | Fixed | Module-level instance with listener registry survives StrictMode remounts |

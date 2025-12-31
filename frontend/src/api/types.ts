@@ -2,7 +2,7 @@
  * Video status enum matching backend VideoStatus
  * @see backend/app/schemas.py
  */
-export type VideoStatus = 'pending' | 'downloading' | 'complete' | 'failed'
+export type VideoStatus = 'pending' | 'downloading' | 'complete' | 'failed' | 'cancelled'
 
 /**
  * Video entity matching VideoResponse schema

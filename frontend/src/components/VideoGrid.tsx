@@ -9,6 +9,7 @@ interface VideoGridProps {
   onDelete: (videoId: string) => void
   onPlay: (video: Video) => void
   onRetry?: (videoId: string) => void
+  onCancel?: (videoId: string) => void
 }
 
 export default function VideoGrid({
@@ -16,7 +17,8 @@ export default function VideoGrid({
   onFavoriteToggle,
   onDelete,
   onPlay,
-  onRetry
+  onRetry,
+  onCancel
 }: VideoGridProps) {
   // Track which video's overlay is active (for mobile touch)
   const [activeOverlayId, setActiveOverlayId] = useState<string | null>(null)
@@ -68,6 +70,7 @@ export default function VideoGrid({
             onDelete={onDelete}
             onPlay={onPlay}
             onRetry={onRetry}
+            onCancel={onCancel}
             isOverlayActive={activeOverlayId === video.video_id}
             onOverlayActivate={() => setActiveOverlayId(video.video_id)}
           />

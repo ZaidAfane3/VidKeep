@@ -431,6 +431,13 @@ redis-cli KEYS "cancel:*"
 
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
+| 2025-12-31 | Added 'cancelled' status to VideoStatus enum | Complete | - |
+| 2025-12-31 | Created POST /api/videos/{id}/cancel endpoint | Complete | Sets Redis flag, updates status |
+| 2025-12-31 | Updated download task with cancellation checks | Complete | Polling-based approach every 1 second |
+| 2025-12-31 | Added cancelDownload to frontend API client | Complete | - |
+| 2025-12-31 | Added cancel mutation to useVideos hook | Complete | Optimistic update with rollback |
+| 2025-12-31 | Added cancel button to VideoCard and ProgressOverlay | Complete | StopCircle icon with red styling |
+| 2025-12-31 | Wired cancel through VideoGrid → App with toast | Complete | Shows success/error toast |
 
 ## 5. Comments
 

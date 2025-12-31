@@ -9,7 +9,8 @@ from datetime import datetime
 from app.config import settings
 from app.database import get_db
 from app.models import Video
-from app.schemas import VideoCreate, VideoUpdate, VideoResponse, VideoListResponse, IngestResponse
+from app.schemas import VideoCreate, VideoUpdate, VideoResponse, VideoListResponse, IngestResponse, CancelResponse
+from app.redis import get_redis
 from app.services.url_validator import validate_youtube_url
 from app.services.ytdlp import YTDLPService
 from app.worker import enqueue_download
@@ -52,8 +53,8 @@ async def ingest_video(
                 detail=f"Video already exists with status: {existing_video.status}"
             )
 
-        # If video failed, allow retry by resetting status
-        if existing_video.status == "failed":
+        # If video failed or cancelled, allow retry by resetting status
+        if existing_video.status in ["failed", "cancelled"]:
             existing_video.status = "pending"
             existing_video.error_message = None
             await db.commit()
@@ -173,6 +174,47 @@ async def update_video(
     await db.refresh(video)
 
     return VideoResponse.model_validate(video)
+
+
+@router.post("/{video_id}/cancel", response_model=CancelResponse)
+async def cancel_download(
+    video_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Cancel an in-progress or pending download.
+
+    Sets a cancellation flag in Redis that the download worker will check.
+    Updates video status to 'cancelled'.
+    """
+    video = await db.get(Video, video_id)
+    if not video:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Video not found"
+        )
+
+    # Only allow cancelling pending or downloading videos
+    if video.status not in ["pending", "downloading"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot cancel video with status '{video.status}'"
+        )
+
+    # Set cancellation flag in Redis (expires in 1 hour)
+    redis = await get_redis()
+    await redis.set(f"cancel:{video_id}", "1", ex=3600)
+
+    # Update video status
+    video.status = "cancelled"
+    video.error_message = "Download cancelled by user"
+    await db.commit()
+
+    return CancelResponse(
+        video_id=video_id,
+        status="cancelled",
+        message="Download cancelled successfully"
+    )
 
 
 @router.delete("/{video_id}", status_code=status.HTTP_204_NO_CONTENT)

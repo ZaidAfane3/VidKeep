@@ -283,7 +283,12 @@
 
   /* Safe area for iOS notch/home indicator */
   .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 20px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Footer padding that accounts for footer height + safe area */
+  .pb-safe-footer {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
   }
 
   /* Better tap highlight */

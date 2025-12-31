@@ -20,6 +20,10 @@ const statusConfig: Record<VideoStatus, { label: string; className: string }> = 
   complete: {
     label: 'COMPLETE',
     className: 'bg-term-primary text-black'
+  },
+  cancelled: {
+    label: 'CANCELLED',
+    className: 'badge-error'
   }
 }
 

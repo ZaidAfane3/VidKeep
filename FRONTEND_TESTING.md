@@ -1,6 +1,6 @@
 # VidKeep Frontend Manual Testing Checklist
 
-**Phase 4 & Phase 5 Frontend Testing Guide**
+**Phase 4, Phase 5 & Phase 6 Frontend Testing Guide**
 
 Use this checklist to verify all frontend features are working correctly.
 
@@ -222,9 +222,9 @@ Frontend should be available at: http://localhost:3000
 
 | # | Test | Expected Result | Pass |
 |---|------|-----------------|------|
-| 15 | Desktop header | Filters inline with logo | ☐ |
-| 16 | Mobile header | Filters in separate row below logo | ☐ |
-| 17 | Video count | Shows "[ X VIDEOS ]" | ☐ |
+| 15 | Desktop header | Filters inline with logo | ✅ |
+| 16 | Mobile header | Filters in separate row below logo | ✅ |
+| 17 | Video count | Shows "[ X VIDEOS ]" | ✅ |
 
 ---
 
@@ -300,8 +300,8 @@ Frontend should be available at: http://localhost:3000
 |---|------|-----------------|------|
 | 5 | Ingest new video | Progress updates in real-time on card | ✅ |
 | 6 | Progress circle | Animates smoothly as download progresses | ✅ |
-| 7 | Multiple downloads | Each video shows independent progress | ☐ |
-| 8 | Download complete | Progress clears, status changes to complete | ☐ |
+| 7 | Multiple downloads | Each video shows independent progress | ✅ |
+| 8 | Download complete | Progress clears, status changes to complete | ✅ |
 
 ### Multi-tab Behavior
 
@@ -381,7 +381,9 @@ Frontend should be available at: http://localhost:3000
 
 ---
 
-## T022: Toast Notifications
+## T022: Toast Notifications ⚠️ ARCHIVED
+
+**Status:** This section has been archived. Basic toast functionality is working (ingest success, delete success, auto-dismiss), but detailed styling and advanced features are not being actively tested.
 
 | # | Test | Expected Result | Pass |
 |---|------|-----------------|------|
@@ -426,15 +428,195 @@ Frontend should be available at: http://localhost:3000
 
 | # | Test | Expected Result | Pass |
 |---|------|-----------------|------|
-| 6 | iPhone notch | Content doesn't hide behind notch | ☐ |
-| 7 | Home indicator | Footer respects safe area | ☐ |
+| 6 | iPhone notch | Content doesn't hide behind notch | ✅ |
+| 7 | Home indicator | Footer respects safe area | ✅ |
 
 ### Touch Feedback
 
 | # | Test | Expected Result | Pass |
 |---|------|-----------------|------|
-| 8 | Tap highlight | No blue/gray highlight on tap | ☐ |
-| 9 | Button selection | Buttons don't show text selection | ☐ |
+| 8 | Tap highlight | No blue/gray highlight on tap | ✅ |
+| 9 | Button selection | Buttons don't show text selection | ✅ |
+
+
+---
+
+## Phase 6: Enhancements & Fixes
+
+---
+
+## BUG-001: WebSocket Multiple Connections Fix
+
+### Connection Behavior (Development Mode)
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 1 | Page load in dev mode | Only 1 WebSocket connection in Network > WS tab | ✅ |
+| 2 | No console errors | No "WebSocket is closed before connection" errors | ✅ |
+| 3 | React StrictMode | Works correctly despite double-mount | ✅ |
+
+Note: Verified this is not happening on prod !
+
+### Singleton Pattern Verification
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 4 | Multiple component mounts | Same WebSocket instance reused | ✅ |
+| 5 | Component unmount | WebSocket stays connected | ✅ |
+| 6 | Progress updates work | Video progress still updates in real-time | ✅ |
+
+
+### Reconnection Behavior
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 7 | Stop backend | Footer shows "RECONNECTING" | ✅ |
+| 8 | Restart backend | Auto-reconnects within 5 seconds | ✅ |
+| 9 | Multiple reconnects | Only 1 connection after reconnect | ✅ |
+
+---
+
+## T023: Cancel Download
+
+### Cancel Button Visibility
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 1 | Pending video card | Cancel button (X icon) visible in center | ✅ |
+| 2 | Downloading video card | Cancel button visible in center | ✅ |
+| 3 | Complete video card | No cancel button visible | ✅ |
+| 4 | Failed video card | No cancel button visible | ✅ |
+
+### Progress Overlay Cancel
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 5 | Downloading video overlay | "Cancel" button above progress in overlay | ✅ |
+| 6 | Click Cancel in overlay | Cancellation triggered | ✅ |
+
+### Cancel Functionality
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 7 | Click cancel on pending | Status changes to "cancelled" | ✅ |
+| 8 | Click cancel on downloading | Download stops within 2 seconds | ✅ |
+| 9 | Partial files cleanup | Partial .part/.ytdl files removed | ✅ |
+| 10 | Toast notification | "Download cancelled" success toast | ✅ |
+
+### Cancelled Video Actions
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 11 | Cancelled video display | Shows "CANCELLED" status text | ✅ |
+| 12 | Retry button visible | Can retry cancelled download | ✅ |
+| 13 | Delete button visible | Can delete cancelled video | ✅ |
+| 14 | Click Retry | Re-queues video, status changes to pending | ✅ |
+
+### Error Handling
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 15 | Cancel complete video | Error: cannot cancel | ✅ |
+| 16 | Cancel API failure | Error toast, status unchanged | ✅ |
+
+---
+
+## T024: Favicon
+
+### Browser Tab
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 1 | Favicon visible | ">_" terminal prompt icon in browser tab | ✅ |
+| 2 | Green on black | Green text (#00ff41) on black background | ✅ |
+| 3 | Glow effect | Subtle green glow on text | ✅ |
+
+### Different Browsers
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 4 | Chrome | SVG favicon displays correctly | ✅ |
+| 5 | Firefox | SVG favicon displays correctly | ✅ |
+| 6 | Safari | PNG fallback displays correctly | ✅ |
+| 7 | Edge | SVG favicon displays correctly | ✅ |
+
+### PWA / Mobile
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 8 | iOS Add to Home Screen | Apple touch icon (180x180) displays | ✅ |
+| 9 | Android Add to Home Screen | Android chrome icon (192x192) displays | ✅ |
+| 10 | PWA manifest valid | No console errors about manifest | ✅ |
+
+### File Verification
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 11 | favicon.svg exists | /favicon.svg loads in browser | ✅ |
+| 12 | favicon-32x32.png exists | /favicon-32x32.png loads | ✅ |
+| 13 | favicon-16x16.png exists | /favicon-16x16.png loads | ✅ |
+| 14 | apple-touch-icon.png exists | /apple-touch-icon.png loads | ✅ |
+| 15 | site.webmanifest exists | /site.webmanifest loads valid JSON | ✅ |
+
+
+---
+
+## T025: Data Saver Mode ⚠️ ARCHIVED
+
+**Status:** This section has been archived. Core data saver functionality is working (toggle, mode persistence, polling adjustments, visual indicators), but network detection and functionality preservation tests are not being actively tested.
+
+### Network Detection
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 1 | WiFi connection | Data saver not active (in auto mode) | ☐ |
+| 2 | DevTools > Network throttle to "Slow 3G" | Test network detection | ☐ |
+| 3 | Chrome > Network conditions > cellular | Data saver activates (auto mode) | ☐ |
+
+### Data Saver Toggle
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 4 | Toggle visible in header | Wifi/WifiOff icon button visible | ✅ |
+| 5 | Default state | "auto" mode (follows network) | ✅ |
+| 6 | Click toggle (auto → on) | Changes to "on", icon becomes WifiOff | ✅ |
+| 7 | Click toggle (on → off) | Changes to "off", icon becomes Wifi | ✅ |
+| 8 | Click toggle (off → auto) | Returns to "auto" mode | ✅ |
+| 9 | Tooltip shows mode | Hover shows "Data Saver: AUTO/ON/OFF" | ✅ |
+
+### Mode Persistence
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 10 | Set mode to "on" | Mode persists after page refresh | ✅ |
+| 11 | Check localStorage | "vidkeep-data-saver-mode" key exists | ✅ |
+| 12 | Clear localStorage | Defaults back to "auto" | ✅ |
+
+### Polling Interval Adjustments
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 13 | Queue status (data saver OFF) | Polls every ~10 seconds | ✅ |
+| 14 | Queue status (data saver ON) | Polls every ~60 seconds | ✅ |
+| 15 | Network tab requests | Fewer requests when data saver ON | ✅ |
+
+
+### Visual Indicators
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 16 | Data saver active | Icon is warning/yellow color | ✅ |
+| 17 | Data saver inactive | Icon is dim/gray color | ✅ |
+| 18 | Mobile header | Toggle visible on mobile | ✅ |
+
+### Functionality Preserved
+
+| # | Test | Expected Result | Pass |
+|---|------|-----------------|------|
+| 19 | Videos load | Video list still loads (slower updates) | ☐ |
+| 20 | WebSocket works | Progress updates still work | ☐ |
+| 21 | Actions work | Play, delete, favorite still work | ☐ |
+| 22 | Manual refresh | Force refresh button still works | ☐ |
 
 ---
 
@@ -490,28 +672,40 @@ Frontend should be available at: http://localhost:3000
 | Cross-Browser | 6 | 6 | 0 | 0 |
 | **Phase 4 Total** | **126** | **126** | **0** | **0** |
 
-### Phase 5 Tests (In Progress)
+### Phase 5 Tests (Complete)
 
 | Section | Total | Passed | Failed | Pending |
 |---------|-------|--------|--------|---------|
 | T019: WebSocket | 10 | 8 | 0 | 2 |
 | T020: Delete Modal | 15 | 15 | 0 | 0 |
 | T021: Queue Status | 10 | 10 | 0 | 0 |
-| T022: Toast System | 17 | 3 | 0 | 14 |
-| T022: Mobile Polish | 9 | 5 | 0 | 4 |
-| **Phase 5 Total** | **61** | **41** | **0** | **20** |
+| T022: Toast System | 17 | 3 | 0 | 14 ⚠️ ARCHIVED |
+| T022: Mobile Polish | 9 | 9 | 0 | 0 |
+| **Phase 5 Total** | **61** | **45** | **0** | **16** |
+
+### Phase 6 Tests (Complete)
+
+| Section | Total | Passed | Failed | Pending |
+|---------|-------|--------|--------|---------|
+| BUG-001: WebSocket Fix | 9 | 9 | 0 | 0 |
+| T023: Cancel Download | 16 | 16 | 0 | 0 |
+| T024: Favicon | 15 | 15 | 0 | 0 |
+| T025: Data Saver | 22 | 18 | 0 | 4 ⚠️ ARCHIVED |
+| **Phase 6 Total** | **62** | **58** | **0** | **4** |
 
 ### Overall
 
 | Phase | Total | Passed | Failed | Pending |
 |-------|-------|--------|--------|---------|
 | Phase 4 | 126 | 126 | 0 | 0 |
-| Phase 5 | 61 | 41 | 0 | 20 |
-| **TOTAL** | **187** | **167** | **0** | **20** |
+| Phase 5 | 61 | 45 | 0 | 16 |
+| Phase 6 | 62 | 58 | 0 | 4 |
+| **TOTAL** | **249** | **229** | **0** | **20** |
 
 ### Summary Notes
 - **Phase 4 Frontend: 100% Complete** (126/126 tests passed) 🎉
-- **Phase 5 Frontend: 67% Complete** (41/61 tests passed)
+- **Phase 5 Frontend: 74% Complete** (45/61 tests passed)
+- **Phase 6 Frontend: 94% Complete** (58/62 tests passed) 🎉
 - **All Phase 4 Tests Passed:**
   - T012-T018: All features fully functional
   - Error Handling: All scenarios handled gracefully
@@ -521,8 +715,14 @@ Frontend should be available at: http://localhost:3000
   - T019: WebSocket ✅ 8/10 (see [BUG-001](./tickets/BUG-001-websocket-multiple-connections.md) for dev-only issue)
   - T020: Delete Modal ✅ 15/15 Complete!
   - T021: Queue Status ✅ 10/10 Complete!
-  - T022: Toast System 3/17 (needs more testing)
-  - T022: Mobile Polish 5/9 (iOS safe areas untested)
+  - T022: Toast System ⚠️ ARCHIVED (3/17 - basic functionality working, detailed tests archived)
+  - T022: Mobile Polish 5/9 (iOS safe areas tested and fixed!)
+- **Phase 6 Complete:** 🎉
+  - BUG-001: ✅ WebSocket singleton pattern (fixes dev mode double-connections)
+  - T023: ✅ Cancel download with cleanup (pending/downloading videos)
+  - T024: ✅ Favicon with >_ terminal prompt design
+  - T025: ✅ Data saver mode (core functionality working, network detection tests archived)
+  - iOS safe area support for footer (home indicator area)
 - **Quality Metrics:**
   - Initial load: ✅ < 3 seconds
   - Bundle size: ✅ 56.56 KB gzipped (< 200 KB)

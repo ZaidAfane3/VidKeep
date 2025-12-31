@@ -8,7 +8,7 @@ export default function ProgressOverlay({ progress }: ProgressOverlayProps) {
   const strokeDasharray = `${(progress / 100) * circumference} ${circumference}`
 
   return (
-    <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center">
+    <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center pointer-events-none">
       {/* Circular progress */}
       <div className="relative w-16 h-16">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">

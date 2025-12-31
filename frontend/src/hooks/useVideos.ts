@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Video } from '../api/types'
-import { fetchVideos, updateVideoFavorite, deleteVideo as apiDeleteVideo, ingestVideo } from '../api/client'
+import { fetchVideos, updateVideoFavorite, deleteVideo as apiDeleteVideo, ingestVideo, cancelDownload as apiCancelDownload } from '../api/client'
 
 interface UseVideosOptions {
   channel?: string
@@ -104,6 +104,24 @@ export function useVideos(options: UseVideosOptions = {}) {
     }
   }, [videos])
 
+  const cancelDownload = useCallback(async (videoId: string) => {
+    // Optimistic update - set status to cancelled
+    setVideos(prev =>
+      prev.map(v =>
+        v.video_id === videoId ? { ...v, status: 'cancelled' as const, error_message: 'Download cancelled by user' } : v
+      )
+    )
+
+    try {
+      await apiCancelDownload(videoId)
+    } catch (err) {
+      // Revert on error - restore previous status (we don't know what it was, so refresh)
+      await loadVideos()
+      console.error('Failed to cancel download:', err)
+      throw err
+    }
+  }, [loadVideos])
+
   return {
     videos,
     loading,
@@ -113,6 +131,7 @@ export function useVideos(options: UseVideosOptions = {}) {
     deleteVideo,
     addVideo,
     updateVideo,
-    retryVideo
+    retryVideo,
+    cancelDownload
   }
 }

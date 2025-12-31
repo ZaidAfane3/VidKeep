@@ -125,6 +125,17 @@ export async function deleteVideo(videoId: string): Promise<void> {
 }
 
 /**
+ * Cancel an in-progress or pending download
+ * @endpoint POST /api/videos/{video_id}/cancel
+ */
+export async function cancelDownload(videoId: string): Promise<{ video_id: string; status: string; message: string }> {
+  const response = await fetch(`${API_BASE}/videos/${videoId}/cancel`, {
+    method: 'POST',
+  })
+  return handleResponse<{ video_id: string; status: string; message: string }>(response)
+}
+
+/**
  * Get queue status
  * @endpoint GET /api/queue/status
  */

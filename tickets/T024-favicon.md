@@ -221,6 +221,10 @@ npx lighthouse http://localhost:5173 --only-categories=pwa
 
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
+| 2025-12-31 | Created favicon.svg with >_ terminal prompt | Complete | Using sharp for PNG generation |
+| 2025-12-31 | Generated all PNG sizes (16, 32, 180, 192, 512) | Complete | 8 files created in public/ |
+| 2025-12-31 | Updated index.html with favicon links | Complete | Added manifest link |
+| 2025-12-31 | Created site.webmanifest for PWA | Complete | - |
 
 ## 5. Comments
 

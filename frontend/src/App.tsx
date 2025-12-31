@@ -9,6 +9,7 @@ import IngestForm from './components/IngestForm'
 import DeleteConfirmModal from './components/DeleteConfirmModal'
 import ToastContainer from './components/ToastContainer'
 import { ToastProvider, useToast } from './contexts/ToastContext'
+import { DataSaverProvider } from './contexts/DataSaverContext'
 import { useVideos } from './hooks/useVideos'
 import { useChannels } from './hooks/useChannels'
 import { useDownloadProgress } from './hooks/useDownloadProgress'
@@ -44,7 +45,8 @@ function AppContent() {
     refresh,
     toggleFavorite,
     deleteVideo,
-    retryVideo
+    retryVideo,
+    cancelDownload
   } = useVideos({
     channel: selectedChannel,
     favoritesOnly
@@ -129,8 +131,18 @@ function AppContent() {
     }
   }
 
+  // Cancel handler with toast
+  const handleCancel = async (videoId: string) => {
+    try {
+      await cancelDownload(videoId)
+      success('Download cancelled', 'Partial files cleaned up')
+    } catch (err) {
+      showError('Cancel failed', err instanceof Error ? err.message : 'Failed to cancel download')
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-term-bg font-terminal pb-12">
+    <div className="min-h-screen bg-term-bg font-terminal pb-safe-footer">
       {/* Scanlines Overlay (Design.md Section 3.1) */}
       <div className="scanlines" aria-hidden="true" />
 
@@ -176,13 +188,14 @@ function AppContent() {
             onDelete={handleDeleteClick}
             onPlay={handlePlay}
             onRetry={handleRetry}
+            onCancel={handleCancel}
           />
         )}
       </main>
 
-      {/* Footer Status Bar */}
-      <footer className="fixed bottom-0 left-0 right-0 h-8 bg-term-bg border-t border-term-dim z-30">
-        <div className="max-w-[1440px] mx-auto px-4 h-full flex items-center justify-between">
+      {/* Footer Status Bar - safe area handled via CSS */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-term-bg border-t border-term-dim z-30 pb-safe">
+        <div className="max-w-[1440px] mx-auto px-4 h-6 flex items-center justify-between">
           <span className="text-mono text-term-primary/40 uppercase">
             VidKeep v1.0.0
           </span>
@@ -235,9 +248,11 @@ function AppContent() {
 
 function App() {
   return (
-    <ToastProvider>
-      <AppContent />
-    </ToastProvider>
+    <DataSaverProvider>
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
+    </DataSaverProvider>
   )
 }
 

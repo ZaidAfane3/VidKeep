@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Heart, Youtube, Play, Download, RefreshCw, Loader2, Trash2 } from 'lucide-react'
+import { Heart, Youtube, Play, Download, RefreshCw, Loader2, Trash2, StopCircle } from 'lucide-react'
 import type { Video } from '../api/types'
 import { getThumbnailUrl, getStreamUrl } from '../api/client'
 import ProgressOverlay from './ProgressOverlay'
@@ -12,6 +12,7 @@ interface VideoCardProps {
   onDelete: (videoId: string) => void
   onPlay: (video: Video) => void
   onRetry?: (videoId: string) => void
+  onCancel?: (videoId: string) => void
   isOverlayActive?: boolean
   onOverlayActivate?: () => void
 }
@@ -25,6 +26,7 @@ export default function VideoCard({
   onDelete,
   onPlay,
   onRetry,
+  onCancel,
   isOverlayActive = false,
   onOverlayActivate
 }: VideoCardProps) {
@@ -36,6 +38,7 @@ export default function VideoCard({
   const isDownloading = video.status === 'downloading'
   const isFailed = video.status === 'failed'
   const isPending = video.status === 'pending'
+  const isCancelled = video.status === 'cancelled'
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -67,6 +70,11 @@ export default function VideoCard({
     onDelete(video.video_id)
   }
 
+  const handleCancel = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onCancel?.(video.video_id)
+  }
+
   const handleTouchStart = (e: React.TouchEvent) => {
     const touch = e.touches[0]
     touchStartRef.current = { x: touch.clientX, y: touch.clientY }
@@ -90,7 +98,7 @@ export default function VideoCard({
   return (
     <div
       data-video-card
-      className={`card-terminal overflow-hidden group relative ${isPending ? 'border-term-warning' : ''} ${isDownloading ? 'border-term-info' : ''} ${isFailed ? 'border-term-error' : ''}`}
+      className={`card-terminal overflow-hidden group relative ${isPending ? 'border-term-warning' : ''} ${isDownloading ? 'border-term-info' : ''} ${isFailed || isCancelled ? 'border-term-error' : ''}`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -106,9 +114,11 @@ export default function VideoCard({
           }}
         />
 
-        {/* Progress overlay for downloading */}
+        {/* Progress overlay for downloading (always visible, no cancel - cancel is on hover) */}
         {isDownloading && (
-          <ProgressOverlay progress={video.download_progress || 0} />
+          <ProgressOverlay
+            progress={video.download_progress || 0}
+          />
         )}
 
         {/* Status badges removed - status indicated by card border color */}
@@ -140,13 +150,15 @@ export default function VideoCard({
           />
         </button>
 
-        {/* Action overlay */}
+        {/* Action overlay - shows on hover/tap for all states */}
         <div
           className={`
             absolute inset-0 bg-term-bg/90
-            ${isOverlayActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
             transition-opacity duration-200 flex items-center justify-center
-            ${isDownloading ? 'pointer-events-none opacity-0' : ''}
+            ${isOverlayActive
+              ? 'opacity-100'
+              : 'opacity-0 group-hover:opacity-100'
+            }
           `}
         >
           {/* Complete: Show YouTube, Play, Download, Delete buttons */}
@@ -199,13 +211,56 @@ export default function VideoCard({
             </div>
           )}
 
-          {/* Pending: Show spinner */}
+          {/* Pending: Show spinner and cancel button */}
           {isPending && (
-            <div className="flex flex-col items-center gap-2 text-term-warning">
+            <div className="flex flex-col items-center gap-3 text-term-warning">
               <Loader2 className="w-8 h-8 animate-spin" />
               <span className="text-mono text-xs uppercase tracking-wider">
                 QUEUED...
               </span>
+              {onCancel && (
+                <ActionButton
+                  onClick={handleCancel}
+                  icon={<StopCircle className="w-5 h-5" />}
+                  label="Cancel"
+                  variant="danger"
+                />
+              )}
+            </div>
+          )}
+
+          {/* Downloading: Show cancel button on hover */}
+          {isDownloading && onCancel && (
+            <div className="flex flex-col items-center gap-3">
+              <ActionButton
+                onClick={handleCancel}
+                icon={<StopCircle className="w-5 h-5" />}
+                label="Cancel"
+                variant="danger"
+              />
+            </div>
+          )}
+
+          {/* Cancelled: Show Retry and Delete buttons */}
+          {isCancelled && (
+            <div className="flex items-center gap-4">
+              <ActionButton
+                onClick={handleYouTube}
+                icon={<Youtube className="w-5 h-5" />}
+                label="YouTube"
+              />
+              <ActionButton
+                onClick={handleRetry}
+                icon={<RefreshCw className="w-5 h-5" />}
+                label="Retry"
+                variant="danger"
+              />
+              <ActionButton
+                onClick={handleDelete}
+                icon={<Trash2 className="w-5 h-5" />}
+                label="Delete"
+                variant="danger"
+              />
             </div>
           )}
         </div>
@@ -246,6 +301,11 @@ export default function VideoCard({
             <p className="text-mono text-term-error line-clamp-1" title={video.error_message || 'Download failed'}>
               {video.error_message ? `ERROR: ${video.error_message}` : 'FAILED'}
             </p>
+          )}
+
+          {/* Cancelled status */}
+          {isCancelled && (
+            <p className="text-mono text-term-error">CANCELLED</p>
           )}
 
           {/* Status text for pending/downloading */}
