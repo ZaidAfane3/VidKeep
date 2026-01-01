@@ -61,13 +61,22 @@ async def database_health(db: AsyncSession = Depends(get_db)):
 
 @router.get("/redis")
 async def redis_health():
-    """Redis connectivity check"""
+    """Redis connectivity check with worker information"""
     try:
         redis_client = await get_redis()
         info = await redis_client.info("server")
+        
+        # Count active workers by finding heartbeat keys
+        worker_keys = await redis_client.keys("vidkeep:worker:*")
+        worker_ids = [key.replace("vidkeep:worker:", "") for key in worker_keys]
+        
         return {
             "status": "healthy",
-            "version": info.get("redis_version")
+            "version": info.get("redis_version"),
+            "workers": {
+                "active": len(worker_ids),
+                "ids": worker_ids
+            }
         }
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
