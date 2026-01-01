@@ -74,10 +74,10 @@ Setting up the core infrastructure: Docker, database, API skeleton, and health c
 
 | Ticket | Title | Status | Dependencies | Comments |
 |--------|-------|--------|--------------|----------|
-| [T001](./tickets/T001-project-structure-docker.md) | Project Structure & Docker Compose | Complete | None | Docker Compose validated |
-| [T002](./tickets/T002-postgresql-alembic.md) | PostgreSQL & Alembic Migrations | Complete | T001 | Video model & migration ready |
-| [T003](./tickets/T003-fastapi-skeleton.md) | FastAPI Application Skeleton | Complete | T002 | Schemas, config, CORS ready |
-| [T004](./tickets/T004-redis-health-checks.md) | Redis & Health Check Endpoints | Complete | T003 | Phase 1 Complete! |
+| [T001](../tickets/T001-project-structure-docker.md) | Project Structure & Docker Compose | Complete | None | Docker Compose validated |
+| [T002](../tickets/T002-postgresql-alembic.md) | PostgreSQL & Alembic Migrations | Complete | T001 | Video model & migration ready |
+| [T003](../tickets/T003-fastapi-skeleton.md) | FastAPI Application Skeleton | Complete | T002 | Schemas, config, CORS ready |
+| [T004](../tickets/T004-redis-health-checks.md) | Redis & Health Check Endpoints | Complete | T003 | Phase 1 Complete! |
 
 ---
 
@@ -87,10 +87,10 @@ Building the download system: worker queue, yt-dlp integration, and ingest API.
 
 | Ticket | Title | Status | Dependencies | Comments |
 |--------|-------|--------|--------------|----------|
-| [T005](./tickets/T005-arq-worker.md) | ARQ Worker Setup | Complete | T004 | Worker ready for downloads |
-| [T006](./tickets/T006-ytdlp-integration.md) | yt-dlp Integration | Complete | T005 | Downloads H.264/AAC/MP4 |
-| [T007](./tickets/T007-thumbnail-metadata.md) | Thumbnail & Metadata Extraction | Complete | T006 | JPG conversion, metadata helpers |
-| [T008](./tickets/T008-ingest-api.md) | Ingest API Endpoint | Complete | T007 | POST /api/videos/ingest ✓ |
+| [T005](../tickets/T005-arq-worker.md) | ARQ Worker Setup | Complete | T004 | Worker ready for downloads |
+| [T006](../tickets/T006-ytdlp-integration.md) | yt-dlp Integration | Complete | T005 | Downloads H.264/AAC/MP4 |
+| [T007](../tickets/T007-thumbnail-metadata.md) | Thumbnail & Metadata Extraction | Complete | T006 | JPG conversion, metadata helpers |
+| [T008](../tickets/T008-ingest-api.md) | Ingest API Endpoint | Complete | T007 | POST /api/videos/ingest ✓ |
 
 ---
 
@@ -100,9 +100,9 @@ Implementing video and thumbnail serving with proper HTTP headers.
 
 | Ticket | Title | Status | Dependencies | Comments |
 |--------|-------|--------|--------------|----------|
-| [T009](./tickets/T009-video-streaming.md) | Video Streaming with Range Support | Complete | T001, T003 | Phase 3 started |
-| [T010](./tickets/T010-thumbnail-serving.md) | Thumbnail Static Serving | Complete | T007 | 24h cache headers |
-| [T011](./tickets/T011-videos-crud-api.md) | Videos CRUD API | Complete | T003 | Phase 3 complete! |
+| [T009](../tickets/T009-video-streaming.md) | Video Streaming with Range Support | Complete | T001, T003 | Phase 3 started |
+| [T010](../tickets/T010-thumbnail-serving.md) | Thumbnail Static Serving | Complete | T007 | 24h cache headers |
+| [T011](../tickets/T011-videos-crud-api.md) | Videos CRUD API | Complete | T003 | Phase 3 complete! |
 
 ---
 
@@ -112,13 +112,13 @@ Building the React UI: video grid, player, filters, and forms. **✅ TESTING COM
 
 | Ticket | Title | Status | Testing | Comments |
 |--------|-------|--------|---------|----------|
-| [T012](./tickets/T012-react-vite-setup.md) | React/Vite Project Setup | Complete | ✅ 7/7 | Phosphor Console theme tested |
-| [T013](./tickets/T013-video-grid.md) | Video Grid Component | Complete | ✅ 7/7 | Responsive 1-4 columns, empty state, loading state tested |
-| [T014](./tickets/T014-thumbnail-card.md) | Thumbnail Card Component | Complete | ✅ 12/12 | Status overlays, RTL, favorites tested |
-| [T015](./tickets/T015-action-overlay.md) | Action Overlay | Complete | ✅ 16/16 | YouTube/Play/Download/Delete/Retry, tap/swipe detection tested |
-| [T016](./tickets/T016-video-player-modal.md) | Video Player Modal | Complete | ✅ 24/24 | All keyboard shortcuts, description panel, RTL tested |
-| [T017](./tickets/T017-channel-filter-favorites.md) | Channel Filter & Favorites | Complete | ✅ 17/17 | Filter dropdown, combined filters, responsiveness tested |
-| [T018](./tickets/T018-ingest-form.md) | Ingest Form | Complete | ✅ 24/24 | URL validation, error handling, network failure tested |
+| [T012](../tickets/T012-react-vite-setup.md) | React/Vite Project Setup | Complete | ✅ 7/7 | Phosphor Console theme tested |
+| [T013](../tickets/T013-video-grid.md) | Video Grid Component | Complete | ✅ 7/7 | Responsive 1-4 columns, empty state, loading state tested |
+| [T014](../tickets/T014-thumbnail-card.md) | Thumbnail Card Component | Complete | ✅ 12/12 | Status overlays, RTL, favorites tested |
+| [T015](../tickets/T015-action-overlay.md) | Action Overlay | Complete | ✅ 16/16 | YouTube/Play/Download/Delete/Retry, tap/swipe detection tested |
+| [T016](../tickets/T016-video-player-modal.md) | Video Player Modal | Complete | ✅ 24/24 | All keyboard shortcuts, description panel, RTL tested |
+| [T017](../tickets/T017-channel-filter-favorites.md) | Channel Filter & Favorites | Complete | ✅ 17/17 | Filter dropdown, combined filters, responsiveness tested |
+| [T018](../tickets/T018-ingest-form.md) | Ingest Form | Complete | ✅ 24/24 | URL validation, error handling, network failure tested |
 
 ---
 
@@ -128,10 +128,10 @@ Final touches: real-time updates, confirmations, and mobile optimization. **✅ 
 
 | Ticket | Title | Status | Dependencies | Comments |
 |--------|-------|--------|--------------|----------|
-| [T019](./tickets/T019-websocket-progress.md) | WebSocket Progress Updates | Complete | T006, T014 | Redis pub/sub, auto-reconnect |
-| [T020](./tickets/T020-delete-modal.md) | Delete Confirmation Modal | Complete | T016, T011 | Video details, loading state |
-| [T021](./tickets/T021-queue-status.md) | Queue Status Indicator | Complete | T011, T017 | Compact + full variants |
-| [T022](./tickets/T022-error-toasts-mobile.md) | Error Toasts & Mobile Polish | Complete | All | Toast system + mobile CSS |
+| [T019](../tickets/T019-websocket-progress.md) | WebSocket Progress Updates | Complete | T006, T014 | Redis pub/sub, auto-reconnect |
+| [T020](../tickets/T020-delete-modal.md) | Delete Confirmation Modal | Complete | T016, T011 | Video details, loading state |
+| [T021](../tickets/T021-queue-status.md) | Queue Status Indicator | Complete | T011, T017 | Compact + full variants |
+| [T022](../tickets/T022-error-toasts-mobile.md) | Error Toasts & Mobile Polish | Complete | All | Toast system + mobile CSS |
 
 ---
 
@@ -141,10 +141,10 @@ Optional enhancements and bugfixes. **✅ ALL COMPLETE**
 
 | Ticket | Title | Type | Status | Priority | Comments |
 |--------|-------|------|--------|----------|----------|
-| [T023](./tickets/T023-cancel-download.md) | Cancel Download with Cleanup | Feature | Complete | Medium | Cancel button, Redis flag, cleanup task |
-| [T024](./tickets/T024-favicon.md) | Favicon Matching App Logo | Feature | Complete | Low | `>_` terminal prompt, all sizes generated |
-| [T025](./tickets/T025-optimize-data-usage.md) | Optimize Data Usage for Cellular | Feature | Complete | Low | Data saver toggle, polling adjustments |
-| [BUG-001](./tickets/BUG-001-websocket-multiple-connections.md) | WebSocket Multiple Connections (Dev) | Bug | Complete | Low | Singleton WebSocket pattern implemented |
+| [T023](../tickets/T023-cancel-download.md) | Cancel Download with Cleanup | Feature | Complete | Medium | Cancel button, Redis flag, cleanup task |
+| [T024](../tickets/T024-favicon.md) | Favicon Matching App Logo | Feature | Complete | Low | `>_` terminal prompt, all sizes generated |
+| [T025](../tickets/T025-optimize-data-usage.md) | Optimize Data Usage for Cellular | Feature | Complete | Low | Data saver toggle, polling adjustments |
+| [BUG-001](../tickets/BUG-001-websocket-multiple-connections.md) | WebSocket Multiple Connections (Dev) | Bug | Complete | Low | Singleton WebSocket pattern implemented |
 
 ---
 
