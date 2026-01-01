@@ -13,6 +13,7 @@ import { DataSaverProvider } from './contexts/DataSaverContext'
 import { useVideos } from './hooks/useVideos'
 import { useChannels } from './hooks/useChannels'
 import { useDownloadProgress } from './hooks/useDownloadProgress'
+import { useWorkerCount } from './hooks/useWorkerCount'
 import type { Video } from './api/types'
 
 function AppContent() {
@@ -36,6 +37,9 @@ function AppContent() {
 
   // WebSocket download progress
   const { progress: downloadProgress, isConnected: wsConnected } = useDownloadProgress()
+
+  // Worker count from Redis health
+  const { workerCount } = useWorkerCount()
 
   // Fetch videos with filter options
   const {
@@ -197,15 +201,24 @@ function AppContent() {
       <footer className="fixed bottom-0 left-0 right-0 bg-term-bg border-t border-term-dim z-30 pb-safe">
         <div className="max-w-[1440px] mx-auto px-4 h-6 flex items-center justify-between">
           <span className="text-mono text-term-primary/40 uppercase">
-            VidKeep v1.0.0
+            VidKeep v1.1.0
           </span>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Worker count - hidden on very small screens */}
+            <span className="hidden sm:flex text-mono text-term-primary/40 uppercase items-center gap-1">
+              <span className="text-term-secondary">⚙</span>
+              {workerCount} {workerCount === 1 ? 'WORKER' : 'WORKERS'}
+            </span>
+            {/* Compact worker count for mobile */}
+            <span className="flex sm:hidden text-mono text-term-primary/40 uppercase items-center gap-1">
+              <span className="text-term-secondary">⚙</span>{workerCount}
+            </span>
             {/* WebSocket connection status */}
             <span className={`text-mono uppercase flex items-center gap-1 ${wsConnected ? 'text-term-success/60' : 'text-term-warning/60'}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-term-success' : 'bg-term-warning animate-pulse'}`} />
-              {wsConnected ? 'LIVE' : 'RECONNECTING'}
+              <span className="hidden sm:inline">{wsConnected ? 'LIVE' : 'RECONNECTING'}</span>
             </span>
-            <span className="text-mono text-term-primary/40 uppercase">
+            <span className="hidden sm:inline text-mono text-term-primary/40 uppercase">
               &lt;/TERMINAL&gt;
             </span>
           </div>

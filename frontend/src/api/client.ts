@@ -160,3 +160,12 @@ export function getStreamUrl(videoId: string): string {
 export function getThumbnailUrl(videoId: string): string {
   return `${API_BASE}/thumbnail/${videoId}`
 }
+
+/**
+ * Fetch Redis health with worker information
+ * @endpoint GET /health/redis
+ */
+export async function fetchRedisHealth(): Promise<import('./types').RedisHealth> {
+  const response = await fetch('/health/redis')
+  return handleResponse<import('./types').RedisHealth>(response)
+}

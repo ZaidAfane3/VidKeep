@@ -84,3 +84,16 @@ export interface QueueStatus {
 export interface ApiError {
   detail: string
 }
+
+/**
+ * Redis health response with worker info
+ * @see backend/app/routers/health.py
+ */
+export interface RedisHealth {
+  status: string
+  version: string
+  workers: {
+    active: number
+    ids: string[]
+  }
+}
