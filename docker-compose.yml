@@ -1,3 +1,7 @@
+# VidKeep Docker Compose Configuration
+# NOTE: Default credentials are for local development only.
+#       For production, use environment variables or Docker secrets.
+
 services:
   api:
     build: ./backend

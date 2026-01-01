@@ -68,3 +68,9 @@ htmlcov/
 .coverage
 coverage.xml
 *.cover
+
+# AI Tools / IDE Assistants
+.claude/
+.gemini/
+.cursor/
+.agent/
