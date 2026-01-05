@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
 
 export interface WebSocketMessage {
-  type: string
+  type: string  // 'progress' | 'completion' | 'status'
   video_id: string
   percent?: number
   downloaded_bytes?: number
   total_bytes?: number
+  status?: string  // For status/completion messages: 'downloading', 'complete', 'failed', 'cancelled'
 }
 
 interface UseWebSocketOptions {

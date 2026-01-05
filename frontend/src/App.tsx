@@ -63,10 +63,14 @@ function AppContent() {
     favoritesOnly
   })
 
-  // WebSocket download progress - triggers refresh when download completes
+  // WebSocket download progress - triggers refresh when download completes or starts
   const { progress: downloadProgress, isConnected: wsConnected } = useDownloadProgress({
     onVideoComplete: () => {
       refresh()
+      refreshQueueStatus()
+    },
+    onDownloadStarted: () => {
+      // Sync queue status immediately when a new download starts
       refreshQueueStatus()
     }
   })

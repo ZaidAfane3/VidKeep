@@ -101,6 +101,13 @@ async def websocket_progress(websocket: WebSocket):
                             "video_id": video_id,
                             "status": data.get("status", "complete")
                         })
+                    elif msg_type == "status":
+                        # Forward status change message (e.g., downloading started)
+                        await websocket.send_json({
+                            "type": "status",
+                            "video_id": video_id,
+                            "status": data.get("status")
+                        })
                     else:
                         # Progress message - only send if we have valid data
                         percent = data.get("percent")

@@ -35,10 +35,18 @@ export default function VideoCard({
 
   const thumbnailUrl = getThumbnailUrl(video.video_id)
   const isComplete = video.status === 'complete'
-  const isDownloading = video.status === 'downloading'
   const isFailed = video.status === 'failed'
-  const isPending = video.status === 'pending'
   const isCancelled = video.status === 'cancelled'
+
+  // BUG-004 Fix: Infer "downloading" status from progress data
+  // When WebSocket progress arrives, video.download_progress gets updated but
+  // video.status may still be "pending" (stale from API). Detect active downloads
+  // by checking for progress data to show the correct UI immediately.
+  // Note: First progress message may have percent=0, so we check != null (not > 0)
+  const isPendingStatus = video.status === 'pending'
+  const hasActiveProgress = video.download_progress != null
+  const isDownloading = video.status === 'downloading' || (isPendingStatus && hasActiveProgress)
+  const isPending = isPendingStatus && !hasActiveProgress
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation()

@@ -63,6 +63,16 @@ async def download_video(ctx, video_id: str, url: str):
             video.status = "downloading"
             await db.commit()
 
+    # Notify frontend that download has started (real-time status sync)
+    await redis.publish(
+        f"progress:{video_id}",
+        json.dumps({
+            "type": "status",
+            "status": "downloading",
+            "video_id": video_id
+        })
+    )
+
     try:
         # Track last cancellation check time to avoid hammering Redis
         last_cancel_check = [0]  # Use list for mutable closure

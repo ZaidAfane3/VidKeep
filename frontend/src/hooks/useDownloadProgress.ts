@@ -14,22 +14,36 @@ interface ProgressState {
 
 interface UseDownloadProgressOptions {
   onVideoComplete?: () => void
+  onDownloadStarted?: () => void  // Called when first progress arrives for any video
+  onStatusChange?: (videoId: string, status: string) => void  // Called on status WebSocket messages
 }
 
 export function useDownloadProgress(options?: UseDownloadProgressOptions) {
   const [progress, setProgress] = useState<ProgressState>({})
 
-  // Use ref to avoid stale closure in handleMessage
+  // Use refs to avoid stale closures in handleMessage
   const onVideoCompleteRef = useRef(options?.onVideoComplete)
+  const onDownloadStartedRef = useRef(options?.onDownloadStarted)
+  const onStatusChangeRef = useRef(options?.onStatusChange)
   useEffect(() => {
     onVideoCompleteRef.current = options?.onVideoComplete
-  }, [options?.onVideoComplete])
+    onDownloadStartedRef.current = options?.onDownloadStarted
+    onStatusChangeRef.current = options?.onStatusChange
+  }, [options?.onVideoComplete, options?.onDownloadStarted, options?.onStatusChange])
 
   // Track which videos we've already triggered refresh for (prevent duplicates)
   const refreshedVideosRef = useRef<Set<string>>(new Set())
+  // Track which videos we've seen progress for (to trigger onDownloadStarted only once)
+  const seenVideosRef = useRef<Set<string>>(new Set())
 
   const handleMessage = useCallback((message: WebSocketMessage) => {
     if (message.type === 'progress') {
+      // Trigger onDownloadStarted when we see a new video's progress for the first time
+      if (!seenVideosRef.current.has(message.video_id)) {
+        seenVideosRef.current.add(message.video_id)
+        onDownloadStartedRef.current?.()
+      }
+
       setProgress(prev => ({
         ...prev,
         [message.video_id]: {
@@ -38,6 +52,16 @@ export function useDownloadProgress(options?: UseDownloadProgressOptions) {
           totalBytes: message.total_bytes
         }
       }))
+    }
+
+    // Handle status change messages from backend (downloading, complete, failed, etc.)
+    if (message.type === 'status' && message.video_id && message.status) {
+      onStatusChangeRef.current?.(message.video_id, message.status)
+      // Also trigger onDownloadStarted for status=downloading if we haven't seen this video
+      if (message.status === 'downloading' && !seenVideosRef.current.has(message.video_id)) {
+        seenVideosRef.current.add(message.video_id)
+        onDownloadStartedRef.current?.()
+      }
     }
 
     // Handle completion messages from backend (complete, cancelled, failed)

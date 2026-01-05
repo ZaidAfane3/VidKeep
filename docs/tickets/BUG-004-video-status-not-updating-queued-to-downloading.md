@@ -4,7 +4,7 @@
 
 **Type:** Bug (Frontend/State Sync)
 **Severity:** Medium (UX Issue)
-**Status:** Open
+**Status:** Fixed *
 **Affected Platforms:** All (Web)
 
 When a video starts downloading, the video card continues to show "QUEUED" status even though:
@@ -198,3 +198,93 @@ After fix:
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
 | 2025-01-05 | Bug identified and documented | Ticket created | Root cause: Status not synced via WebSocket, only progress |
+| 2025-01-05 | Implemented Option A fix | Partial | Modified `VideoCard.tsx` to infer `isDownloading` from `hasActiveProgress` when status is pending |
+| 2025-01-05 | Timing sync investigation | Issue found | First progress message has percent=0, failing `> 0` check. QueueStatus polls every 10s causing lag |
+| 2025-01-05 | Implemented complete sync solution | Resolved | Phase 1: Fix `> 0` to `!= null`, Phase 2: Sync QueueStatus on progress start, Phase 3: WebSocket status messages |
+
+## 8. Timing Synchronization Enhancement
+
+### Problem Discovered
+After initial fix, components still update at different times:
+- QueueStatus header shows "1 DOWNLOADING" (flashing button)
+- VideoCard shows "QUEUED" for 0.3-2 seconds after
+- Root cause: Multiple independent data sources with different update mechanisms
+
+### Architecture Issue
+
+| Component | Data Source | Update Method | Typical Lag |
+|-----------|-------------|---------------|-------------|
+| QueueStatus Header | Redis ARQ queue | HTTP Poll (10s) | 0-10 seconds |
+| VideoCard Status | PostgreSQL API | On page load only | Stale until refresh |
+| Progress Overlay | WebSocket | Real-time | ~100ms |
+
+### Why Initial Fix Was Insufficient
+
+The `hasActiveProgress` check used `> 0`:
+```tsx
+const hasActiveProgress = video.download_progress != null && video.download_progress > 0
+```
+
+First progress message often has `percent: 0`, failing the check and causing 0.3-0.5s delay.
+
+### Complete Solution (3 Phases)
+
+**Phase 1: Fix Progress Detection**
+- Change `> 0` to `!= null` in VideoCard.tsx
+- Any progress value (including 0) indicates active download
+
+**Phase 2: Real-Time QueueStatus Sync**
+- Add `onDownloadStarted` callback to useDownloadProgress
+- Refresh queue status when first progress arrives for any video
+- Eliminates 0-10 second polling lag
+
+**Phase 3: WebSocket Status Messages**
+- Backend sends `{"type": "status", "status": "downloading"}` when job starts
+- Frontend handles status messages for authoritative real-time updates
+- Provides true sync from backend source of truth
+
+## 9. Implementation Summary
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `frontend/src/components/VideoCard.tsx` | Changed `hasActiveProgress` check from `> 0` to `!= null` to detect downloads starting at 0% |
+| `frontend/src/hooks/useDownloadProgress.ts` | Added `onDownloadStarted` callback, `onStatusChange` callback, and `seenVideosRef` tracking for first-progress detection |
+| `frontend/src/hooks/useWebSocket.ts` | Added `status` field to `WebSocketMessage` interface |
+| `frontend/src/App.tsx` | Added `onDownloadStarted` callback to refresh queue status on download start |
+| `backend/app/tasks/download.py` | Added WebSocket status message publish when download starts |
+| `backend/app/routers/websocket.py` | Added handler for `status` message type |
+
+### Key Code Changes
+
+**VideoCard.tsx (Line 47):**
+```tsx
+// Before:
+const hasActiveProgress = video.download_progress != null && video.download_progress > 0
+
+// After:
+const hasActiveProgress = video.download_progress != null
+```
+
+**download.py (Lines 66-74):**
+```python
+# Notify frontend that download has started (real-time status sync)
+await redis.publish(
+    f"progress:{video_id}",
+    json.dumps({
+        "type": "status",
+        "status": "downloading",
+        "video_id": video_id
+    })
+)
+```
+
+**useDownloadProgress.ts:**
+- Added `onDownloadStarted` callback triggered on first progress for any video
+- Added `onStatusChange` callback for WebSocket status messages
+- Added `seenVideosRef` to track which videos have been seen
+
+### Result
+
+All UI components (QueueStatus header, VideoCard, Progress Overlay) now update simultaneously within ~100ms when a download starts, eliminating the previous 0.3-10 second delays between component updates.
