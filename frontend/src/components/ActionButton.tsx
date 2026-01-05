@@ -15,9 +15,11 @@ export default function ActionButton({
   disabled = false,
   variant = 'default'
 }: ActionButtonProps) {
+  // Note: hover styles are handled via CSS media query in index.css
+  // to prevent "sticky hover" on touch devices
   const variantClasses = {
-    default: 'border-term-primary text-term-primary hover:bg-term-primary hover:text-black',
-    danger: 'border-term-error text-term-error hover:bg-term-error hover:text-black'
+    default: 'border-term-primary text-term-primary action-btn-default',
+    danger: 'border-term-error text-term-error action-btn-danger'
   }
 
   return (

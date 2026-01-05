@@ -315,3 +315,17 @@
     min-width: 44px;
   }
 }
+
+/* Action button hover states - only on devices with hover capability */
+/* Prevents "sticky hover" on touch devices (iOS/Android) */
+@media (hover: hover) {
+  .action-btn-default:hover {
+    background-color: #00ff41;
+    color: #000000;
+  }
+
+  .action-btn-danger:hover {
+    background-color: #ff3333;
+    color: #000000;
+  }
+}

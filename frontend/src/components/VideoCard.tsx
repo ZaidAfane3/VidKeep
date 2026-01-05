@@ -89,7 +89,12 @@ export default function VideoCard({
 
     // Only activate overlay if it was a tap (not a swipe)
     if (deltaX < SWIPE_THRESHOLD && deltaY < SWIPE_THRESHOLD) {
-      onOverlayActivate?.()
+      // If overlay is not active, activate it and prevent the synthetic click
+      // This stops the browser from firing a click on the now-visible button
+      if (!isOverlayActive) {
+        e.preventDefault()
+        onOverlayActivate?.()
+      }
     }
 
     touchStartRef.current = null
@@ -157,7 +162,7 @@ export default function VideoCard({
             transition-opacity duration-200 flex items-center justify-center
             ${isOverlayActive
               ? 'opacity-100'
-              : 'opacity-0 group-hover:opacity-100'
+              : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
             }
           `}
         >

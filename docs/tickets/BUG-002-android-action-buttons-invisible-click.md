@@ -4,7 +4,7 @@
 
 **Type:** Bug (Mobile/Android)
 **Severity:** Medium
-**Status:** Open
+**Status:** Complete
 **Affected Platforms:** Android (Chrome, Firefox, etc.)
 **Not Affected:** iOS, Desktop
 
@@ -60,65 +60,73 @@ iOS has different touch handling behavior:
 
 ## 4. Technical Solution
 
-Add `pointer-events: none` to the overlay when hidden, and `pointer-events: auto` when visible.
+Two fixes were required:
 
-### Files to Modify
+### Fix 1: Prevent synthetic click on Android
 
-- `frontend/src/components/VideoCard.tsx`
+**File:** `frontend/src/components/VideoCard.tsx`
 
-### Implementation
+The browser synthesizes a `click` event after `touchend`. By the time the click fires, React has already re-rendered with the overlay visible, so the click hits the now-visible button.
+
+**Solution:** Call `e.preventDefault()` in `handleTouchEnd` when activating the overlay:
 
 ```tsx
-// Lines 154-162 - Add pointer-events control
-<div
-  className={`
-    absolute inset-0 bg-term-bg/90
-    transition-opacity duration-200 flex items-center justify-center
-    ${isOverlayActive
-      ? 'opacity-100 pointer-events-auto'
-      : 'opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto'
+const handleTouchEnd = (e: React.TouchEvent) => {
+  // ... swipe detection logic ...
+
+  if (deltaX < SWIPE_THRESHOLD && deltaY < SWIPE_THRESHOLD) {
+    // If overlay is not active, activate it and prevent the synthetic click
+    if (!isOverlayActive) {
+      e.preventDefault()  // Prevents browser from firing click event
+      onOverlayActivate?.()
     }
-  `}
->
+  }
+}
 ```
 
-### Why This Works
+### Fix 2: Prevent sticky hover on iOS
 
-- `pointer-events: none` prevents all mouse/touch events from reaching the element and its children
-- When the overlay is hidden (`opacity-0`), clicks pass through to the card (triggering overlay activation)
-- When the overlay is visible (`opacity-100` or `group-hover:opacity-100`), buttons receive events normally
-- The `group-hover:pointer-events-auto` ensures desktop hover behavior still works
+**Files:**
+- `frontend/src/components/ActionButton.tsx`
+- `frontend/src/index.css`
 
-### Alternative Solutions Considered
+On iOS, the `:hover` state persists after a tap until the user taps elsewhere.
 
-1. **Conditional rendering (`{isOverlayActive && <ActionButtons />}`):**
-   - Pros: Simpler, no hidden clickable elements
-   - Cons: Breaks CSS transitions (no fade-in effect), breaks desktop hover behavior entirely
+**Solution:** Move hover styles to a `@media (hover: hover)` query so they only apply on devices with true hover capability (mouse):
 
-2. **`visibility: hidden` instead of `opacity: 0`:**
-   - Pros: Also disables pointer events
-   - Cons: No smooth fade transitions (visibility is binary)
+```css
+/* index.css */
+@media (hover: hover) {
+  .action-btn-default:hover {
+    background-color: #00ff41;
+    color: #000000;
+  }
+  .action-btn-danger:hover {
+    background-color: #ff3333;
+    color: #000000;
+  }
+}
+```
 
-3. **Touch event prevention on buttons:**
-   - Pros: Could selectively block
-   - Cons: Complex, may cause other issues with button responsiveness
-
-The `pointer-events` solution is preferred because it:
-- Preserves existing CSS transitions
-- Works with both touch (mobile) and hover (desktop)
-- Is a minimal, targeted fix
-- Is widely supported across browsers
+```tsx
+// ActionButton.tsx - Use CSS classes instead of Tailwind hover:
+const variantClasses = {
+  default: 'border-term-primary text-term-primary action-btn-default',
+  danger: 'border-term-error text-term-error action-btn-danger'
+}
+```
 
 ## 5. Verification Checklist
 
 After fix:
-- [ ] Android: First tap on video card only reveals overlay, doesn't trigger action
-- [ ] Android: Second tap on visible button triggers the action correctly
-- [ ] iOS: Existing behavior preserved (tap to reveal, tap to action)
-- [ ] Desktop: Hover reveals overlay, click triggers action
-- [ ] Desktop: Transition animation still works smoothly
-- [ ] Favorite button (separate from overlay) still works on first tap
-- [ ] All action buttons work: YouTube, Play, Download, Delete, Retry, Cancel
+- [x] Android: First tap on video card only reveals overlay, doesn't trigger action
+- [x] Android: Second tap on visible button triggers the action correctly
+- [x] iOS: Existing behavior preserved (tap to reveal, tap to action)
+- [x] iOS: No sticky hover state on buttons
+- [x] Desktop: Hover reveals overlay, click triggers action
+- [x] Desktop: Transition animation still works smoothly
+- [x] Favorite button (separate from overlay) still works on first tap
+- [x] All action buttons work: YouTube, Play, Download, Delete, Retry, Cancel
 
 ## 6. Test Devices
 
@@ -130,12 +138,16 @@ After fix:
 
 ## 7. Related Files
 
-- `frontend/src/components/VideoCard.tsx` - Contains overlay and action buttons
-- `frontend/src/components/ActionButton.tsx` - Individual button component
+- `frontend/src/components/VideoCard.tsx` - Contains overlay and touch handlers
+- `frontend/src/components/ActionButton.tsx` - Individual button component (hover classes)
 - `frontend/src/components/VideoGrid.tsx` - Manages `isOverlayActive` state
+- `frontend/src/index.css` - Hover styles with media query
 
 ## 8. Execution Logs
 
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
 | 2025-01-05 | Bug identified and documented | Ticket created | Root cause: opacity:0 doesn't block pointer events |
+| 2025-01-05 | Initial fix attempted | Partial | Added `pointer-events-none` to overlay - didn't fix the issue |
+| 2025-01-05 | Root cause refined | Fixed | Issue was synthetic click firing after touchend. Added `e.preventDefault()` in handleTouchEnd when activating overlay |
+| 2025-01-05 | iOS sticky hover fix | Fixed | Moved hover styles to `@media (hover: hover)` in index.css to prevent stuck hover state on touch devices |
