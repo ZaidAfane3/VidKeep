@@ -4,7 +4,7 @@
 
 **Type:** Bug (Frontend/WebSocket)
 **Severity:** Low (Cosmetic/UX)
-**Status:** Open
+**Status:** Done
 **Affected Platforms:** All (Web)
 
 Two related issues occur when a video download completes:
@@ -190,3 +190,29 @@ After fix:
 | Date | Action | Outcome | Issues & Resolutions |
 |------|--------|---------|----------------------|
 | 2025-01-05 | Bug identified and documented | Ticket created | Root cause: Missing WebSocket status messages and no auto-polling |
+| 2025-01-05 | Implemented Option A fix | Complete | Backend now sends `completion` messages; frontend clears progress and refreshes video list |
+| 2025-01-05 | Fixed WebSocket router | Complete | Router was converting completion messages to progress messages with percent:0 |
+| 2025-01-05 | Fixed header queue status | Complete | Lifted useQueueStatus to App.tsx so completion triggers queue refresh too |
+
+## 8. Implementation Summary
+
+**Approach:** Option A - Backend WebSocket Status Messages
+
+### Backend Changes (`backend/app/tasks/download.py`)
+
+Added completion message publishing at three locations:
+
+1. **After successful download** (line ~144): Sends `{ "type": "completion", "status": "complete", "video_id": "..." }`
+2. **After cancellation** (line ~168): Sends `{ "type": "completion", "status": "cancelled", "video_id": "..." }`
+3. **After failure** (line ~188): Sends `{ "type": "completion", "status": "failed", "video_id": "..." }`
+
+### Frontend Changes
+
+**`frontend/src/hooks/useDownloadProgress.ts`:**
+- Added `onVideoComplete` callback option
+- Handles `type: "completion"` messages to clear progress state
+- Triggers callback to refresh video list
+
+**`frontend/src/App.tsx`:**
+- Passes `refresh` function to `useDownloadProgress({ onVideoComplete: refresh })`
+- Video list automatically refreshes when any download completes

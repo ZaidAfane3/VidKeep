@@ -91,14 +91,27 @@ async def websocket_progress(websocket: WebSocket):
                         data_str = data_str.decode()
                     data = json.loads(data_str)
 
-                    # Send to WebSocket client
-                    await websocket.send_json({
-                        "type": "progress",
-                        "video_id": video_id,
-                        "percent": data.get("percent", 0),
-                        "downloaded_bytes": data.get("downloaded_bytes"),
-                        "total_bytes": data.get("total_bytes")
-                    })
+                    # Check message type - completion messages are handled differently
+                    msg_type = data.get("type", "progress")
+
+                    if msg_type == "completion":
+                        # Forward completion message as-is (with video_id)
+                        await websocket.send_json({
+                            "type": "completion",
+                            "video_id": video_id,
+                            "status": data.get("status", "complete")
+                        })
+                    else:
+                        # Progress message - only send if we have valid data
+                        percent = data.get("percent")
+                        if percent is not None:
+                            await websocket.send_json({
+                                "type": "progress",
+                                "video_id": video_id,
+                                "percent": percent,
+                                "downloaded_bytes": data.get("downloaded_bytes"),
+                                "total_bytes": data.get("total_bytes")
+                            })
 
             except asyncio.TimeoutError:
                 pass

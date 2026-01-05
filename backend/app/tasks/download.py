@@ -67,15 +67,70 @@ async def download_video(ctx, video_id: str, url: str):
         # Track last cancellation check time to avoid hammering Redis
         last_cancel_check = [0]  # Use list for mutable closure
 
+        # Track progress across multiple streams (video + audio)
+        # yt-dlp downloads video and audio separately, then merges them
+        stream_totals = {}  # {filename: total_bytes} - track each stream's size
+        completed_bytes = [0]  # Bytes from fully downloaded streams
+        last_percent_sent = [0]  # Avoid sending duplicate/regressing percentages
+        current_stream = [None]  # Track current stream filename
+
         # Progress callback for Redis pub/sub (called from sync context)
         def progress_hook(d):
+            import time
+
             if d['status'] == 'downloading':
-                total = d.get('total_bytes') or d.get('total_bytes_estimate', 0)
-                downloaded = d.get('downloaded_bytes', 0)
-                percent = int((downloaded / total * 100)) if total > 0 else 0
+                filename = d.get('filename', 'unknown')
+                # Use 'or 0' to handle None values from yt-dlp during post-processing
+                total = d.get('total_bytes') or d.get('total_bytes_estimate') or 0
+                downloaded = d.get('downloaded_bytes') or 0
+
+                # Skip if no valid data (happens during post-processing/muxing)
+                if total <= 0:
+                    return
+
+                # Detect stream change - if filename changed, previous stream completed
+                if current_stream[0] is not None and current_stream[0] != filename:
+                    # Previous stream finished, add its total to completed bytes
+                    if current_stream[0] in stream_totals:
+                        completed_bytes[0] += stream_totals[current_stream[0]]
+
+                current_stream[0] = filename
+
+                # Track this stream's total size
+                stream_totals[filename] = total
+
+                # Calculate combined progress: completed streams + current progress
+                total_downloaded = completed_bytes[0] + downloaded
+                total_size = completed_bytes[0] + total
+
+                # If we have info about other pending streams, include them
+                # (yt-dlp may have already informed us about audio stream size)
+                for fn, size in stream_totals.items():
+                    if fn != filename and fn not in [current_stream[0]]:
+                        total_size += size
+
+                percent = int((total_downloaded / total_size * 100)) if total_size > 0 else 0
+
+                # Cap at 99% - only completion message should show 100%
+                percent = min(percent, 99)
+
+                # Don't send if percentage hasn't changed or regressed
+                if percent <= last_percent_sent[0] and last_percent_sent[0] > 0:
+                    # Still check for cancellation
+                    current_time = time.time()
+                    if current_time - last_cancel_check[0] >= 1.0:
+                        last_cancel_check[0] = current_time
+                        try:
+                            if sync_redis_client.get(f"cancel:{video_id}"):
+                                sync_redis_client.delete(f"cancel:{video_id}")
+                                raise DownloadCancelledException("Download cancelled by user")
+                        except sync_redis.exceptions.ConnectionError:
+                            pass
+                    return
+
+                last_percent_sent[0] = percent
 
                 # Check for cancellation every ~1 second (based on progress updates)
-                import time
                 current_time = time.time()
                 if current_time - last_cancel_check[0] >= 1.0:
                     last_cancel_check[0] = current_time
@@ -92,12 +147,19 @@ async def download_video(ctx, video_id: str, url: str):
                         f"progress:{video_id}",
                         json.dumps({
                             "percent": percent,
-                            "downloaded_bytes": downloaded,
-                            "total_bytes": total
+                            "downloaded_bytes": total_downloaded,
+                            "total_bytes": total_size
                         })
                     ),
                     loop
                 )
+
+            elif d['status'] == 'finished':
+                # Stream finished - mark it as completed
+                filename = d.get('filename', 'unknown')
+                total = d.get('total_bytes') or d.get('downloaded_bytes', 0)
+                if total > 0:
+                    stream_totals[filename] = total
 
         # Download the video
         info = await ytdlp.download(url, video_id, progress_hook)
@@ -133,6 +195,16 @@ async def download_video(ctx, video_id: str, url: str):
                 video.description = metadata['description']
                 await db.commit()
 
+        # Notify frontend that download is complete
+        await redis.publish(
+            f"progress:{video_id}",
+            json.dumps({
+                "type": "completion",
+                "status": "complete",
+                "video_id": video_id
+            })
+        )
+
         return {"status": "complete", "video_id": video_id}
 
     except DownloadCancelledException:
@@ -147,6 +219,16 @@ async def download_video(ctx, video_id: str, url: str):
                 video.error_message = "Download cancelled by user"
                 await db.commit()
 
+        # Notify frontend that download was cancelled
+        await redis.publish(
+            f"progress:{video_id}",
+            json.dumps({
+                "type": "completion",
+                "status": "cancelled",
+                "video_id": video_id
+            })
+        )
+
         return {"status": "cancelled", "video_id": video_id}
 
     except Exception as e:
@@ -157,6 +239,16 @@ async def download_video(ctx, video_id: str, url: str):
                 video.status = "failed"
                 video.error_message = str(e)[:500]  # Truncate long errors
                 await db.commit()
+
+        # Notify frontend that download failed
+        await redis.publish(
+            f"progress:{video_id}",
+            json.dumps({
+                "type": "completion",
+                "status": "failed",
+                "video_id": video_id
+            })
+        )
 
         raise  # Re-raise for ARQ retry logic
     finally:

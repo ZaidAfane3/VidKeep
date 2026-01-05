@@ -1,16 +1,32 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useWebSocket, type WebSocketMessage } from './useWebSocket'
 
-interface ProgressState {
-  [videoId: string]: {
-    percent: number
-    downloadedBytes?: number
-    totalBytes?: number
-  }
+interface ProgressEntry {
+  percent: number
+  downloadedBytes?: number
+  totalBytes?: number
+  isComplete?: boolean  // Track completion status
 }
 
-export function useDownloadProgress() {
+interface ProgressState {
+  [videoId: string]: ProgressEntry
+}
+
+interface UseDownloadProgressOptions {
+  onVideoComplete?: () => void
+}
+
+export function useDownloadProgress(options?: UseDownloadProgressOptions) {
   const [progress, setProgress] = useState<ProgressState>({})
+
+  // Use ref to avoid stale closure in handleMessage
+  const onVideoCompleteRef = useRef(options?.onVideoComplete)
+  useEffect(() => {
+    onVideoCompleteRef.current = options?.onVideoComplete
+  }, [options?.onVideoComplete])
+
+  // Track which videos we've already triggered refresh for (prevent duplicates)
+  const refreshedVideosRef = useRef<Set<string>>(new Set())
 
   const handleMessage = useCallback((message: WebSocketMessage) => {
     if (message.type === 'progress') {
@@ -24,14 +40,30 @@ export function useDownloadProgress() {
       }))
     }
 
-    // Clear progress when download completes or fails
-    // (This would be sent by backend if we add status updates to WebSocket)
-    if (message.type === 'status' && ['complete', 'failed'].includes(message.video_id)) {
-      setProgress(prev => {
-        const next = { ...prev }
-        delete next[message.video_id]
-        return next
-      })
+    // Handle completion messages from backend (complete, cancelled, failed)
+    if (message.type === 'completion' && message.video_id) {
+      // Mark as complete with 100% progress (don't clear - let the overlay show "Complete")
+      setProgress(prev => ({
+        ...prev,
+        [message.video_id]: {
+          ...prev[message.video_id],
+          percent: 100,
+          isComplete: true
+        }
+      }))
+
+      // Only trigger refresh once per video completion
+      if (!refreshedVideosRef.current.has(message.video_id)) {
+        refreshedVideosRef.current.add(message.video_id)
+        // Small delay to ensure DB has committed
+        setTimeout(() => {
+          onVideoCompleteRef.current?.()
+          // Clean up the tracking after refresh
+          setTimeout(() => {
+            refreshedVideosRef.current.delete(message.video_id)
+          }, 5000)
+        }, 300)
+      }
     }
   }, [])
 

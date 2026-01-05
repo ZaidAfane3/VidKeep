@@ -2,7 +2,6 @@ import { X, Plus, Wifi, WifiOff } from 'lucide-react'
 import ChannelFilter from './ChannelFilter'
 import FavoritesToggle from './FavoritesToggle'
 import { QueueStatusCompact } from './QueueStatus'
-import { useQueueStatus } from '../hooks/useQueueStatus'
 import { useDataSaver } from '../contexts/DataSaverContext'
 import type { Channel } from '../api/types'
 
@@ -16,6 +15,10 @@ interface HeaderProps {
   favoritesCount?: number
   totalVideos: number
   onAddVideoClick: () => void
+  // Queue status - passed from App.tsx for immediate refresh on completion
+  queuePending: number
+  queueProcessing: number
+  queueLoading: boolean
 }
 
 export default function Header({
@@ -27,14 +30,12 @@ export default function Header({
   onFavoritesToggle,
   favoritesCount,
   totalVideos,
-  onAddVideoClick
+  onAddVideoClick,
+  queuePending,
+  queueProcessing,
+  queueLoading
 }: HeaderProps) {
   const { mode, isActive: dataSaverActive, setMode } = useDataSaver()
-
-  // Adjust queue polling based on data saver
-  const { pending, processing, loading: queueLoading } = useQueueStatus({
-    pollInterval: dataSaverActive ? 60000 : 10000  // 60s vs 10s
-  })
 
   const hasActiveFilters = selectedChannel || favoritesOnly
 
@@ -68,8 +69,8 @@ export default function Header({
             {/* Queue Status (Desktop) */}
             <div className="hidden md:block">
               <QueueStatusCompact
-                pending={pending}
-                processing={processing}
+                pending={queuePending}
+                processing={queueProcessing}
                 loading={queueLoading}
               />
             </div>
@@ -147,8 +148,8 @@ export default function Header({
           <div className="flex md:hidden items-center gap-2">
             {/* Queue Status (Mobile) */}
             <QueueStatusCompact
-              pending={pending}
-              processing={processing}
+              pending={queuePending}
+              processing={queueProcessing}
               loading={queueLoading}
             />
 

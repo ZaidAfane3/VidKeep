@@ -14,10 +14,13 @@ import { useVideos } from './hooks/useVideos'
 import { useChannels } from './hooks/useChannels'
 import { useDownloadProgress } from './hooks/useDownloadProgress'
 import { useWorkerCount } from './hooks/useWorkerCount'
+import { useQueueStatus } from './hooks/useQueueStatus'
+import { useDataSaver } from './contexts/DataSaverContext'
 import type { Video } from './api/types'
 
 function AppContent() {
   const { toasts, removeToast, success, error: showError } = useToast()
+  const { isActive: dataSaverActive } = useDataSaver()
 
   // Filter state
   const [selectedChannel, setSelectedChannel] = useState<string>()
@@ -35,13 +38,17 @@ function AppContent() {
   // Fetch channels for filter dropdown
   const { channels, loading: channelsLoading, refresh: refreshChannels } = useChannels()
 
-  // WebSocket download progress
-  const { progress: downloadProgress, isConnected: wsConnected } = useDownloadProgress()
+  // Queue status - lifted from Header so we can refresh on completion
+  const {
+    pending: queuePending,
+    processing: queueProcessing,
+    loading: queueLoading,
+    refresh: refreshQueueStatus
+  } = useQueueStatus({
+    pollInterval: dataSaverActive ? 60000 : 10000
+  })
 
-  // Worker count from Redis health
-  const { workerCount } = useWorkerCount()
-
-  // Fetch videos with filter options
+  // Fetch videos with filter options (declared early so refresh is available)
   const {
     videos,
     loading,
@@ -55,6 +62,17 @@ function AppContent() {
     channel: selectedChannel,
     favoritesOnly
   })
+
+  // WebSocket download progress - triggers refresh when download completes
+  const { progress: downloadProgress, isConnected: wsConnected } = useDownloadProgress({
+    onVideoComplete: () => {
+      refresh()
+      refreshQueueStatus()
+    }
+  })
+
+  // Worker count from Redis health
+  const { workerCount } = useWorkerCount()
 
   // Merge WebSocket progress into videos
   const videosWithProgress = useMemo(() => {
@@ -161,6 +179,9 @@ function AppContent() {
         favoritesCount={favoritesCount}
         totalVideos={videosWithProgress.length}
         onAddVideoClick={handleAddVideoClick}
+        queuePending={queuePending}
+        queueProcessing={queueProcessing}
+        queueLoading={queueLoading}
       />
 
       {/* Main Content Area */}

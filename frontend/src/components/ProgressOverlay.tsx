@@ -7,6 +7,8 @@ export default function ProgressOverlay({ progress }: ProgressOverlayProps) {
   const circumference = 2 * Math.PI * 16
   const strokeDasharray = `${(progress / 100) * circumference} ${circumference}`
 
+  const isComplete = progress >= 100
+
   return (
     <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center pointer-events-none">
       {/* Circular progress */}
@@ -22,7 +24,7 @@ export default function ProgressOverlay({ progress }: ProgressOverlayProps) {
             strokeWidth="2"
             className="text-term-dim"
           />
-          {/* Progress circle */}
+          {/* Progress circle - no transition to prevent glitchy animation */}
           <circle
             cx="18"
             cy="18"
@@ -32,16 +34,16 @@ export default function ProgressOverlay({ progress }: ProgressOverlayProps) {
             strokeWidth="2"
             strokeDasharray={strokeDasharray}
             strokeLinecap="square"
-            className="text-term-info transition-all duration-300"
+            className={isComplete ? "text-term-success" : "text-term-info"}
           />
         </svg>
-        {/* Percentage text */}
-        <span className="absolute inset-0 flex items-center justify-center text-body font-bold text-term-info">
-          {progress}%
+        {/* Percentage text or checkmark */}
+        <span className={`absolute inset-0 flex items-center justify-center text-body font-bold ${isComplete ? 'text-term-success' : 'text-term-info'}`}>
+          {isComplete ? '✓' : `${progress}%`}
         </span>
       </div>
-      <p className="text-mono text-term-info/80 mt-2 uppercase tracking-wider">
-        Downloading...
+      <p className={`text-mono mt-2 uppercase tracking-wider ${isComplete ? 'text-term-success/80' : 'text-term-info/80'}`}>
+        {isComplete ? 'Complete!' : 'Downloading...'}
       </p>
     </div>
   )
