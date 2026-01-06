@@ -7,6 +7,7 @@ from enum import Enum
 class VideoStatus(str, Enum):
     pending = "pending"
     downloading = "downloading"
+    resuming = "resuming"
     complete = "complete"
     failed = "failed"
     cancelled = "cancelled"
@@ -43,6 +44,7 @@ class VideoResponse(VideoBase):
     created_at: datetime
     error_message: Optional[str] = None
     download_progress: Optional[int] = None  # 0-100, only during downloading
+    retry_count: int = 0  # Number of retry attempts (T028)
 
     @computed_field
     @property

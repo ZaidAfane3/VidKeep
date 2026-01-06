@@ -45,7 +45,8 @@ export default function VideoCard({
   // Note: First progress message may have percent=0, so we check != null (not > 0)
   const isPendingStatus = video.status === 'pending'
   const hasActiveProgress = video.download_progress != null
-  const isDownloading = video.status === 'downloading' || (isPendingStatus && hasActiveProgress)
+  const isResuming = video.status === 'resuming'
+  const isDownloading = video.status === 'downloading' || video.status === 'resuming' || (isPendingStatus && hasActiveProgress)
   const isPending = isPendingStatus && !hasActiveProgress
 
   const handleDownload = (e: React.MouseEvent) => {
@@ -151,9 +152,9 @@ export default function VideoCard({
           }}
           className={`absolute top-2 right-2 p-1.5 border transition-all z-10
                      ${video.is_favorite
-                       ? 'bg-term-error border-term-error text-black'
-                       : 'bg-term-bg/80 border-term-dim text-term-primary opacity-0 group-hover:opacity-100 hover:border-term-primary'
-                     }`}
+              ? 'bg-term-error border-term-error text-black'
+              : 'bg-term-bg/80 border-term-dim text-term-primary opacity-0 group-hover:opacity-100 hover:border-term-primary'
+            }`}
           aria-label={video.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
         >
           <Heart
@@ -321,12 +322,19 @@ export default function VideoCard({
             <p className="text-mono text-term-error">CANCELLED</p>
           )}
 
-          {/* Status text for pending/downloading */}
+          {/* Status text for pending/downloading/resuming (T028) */}
           {isPending && (
-            <p className="text-mono text-term-warning">QUEUED</p>
+            <div className="flex items-center gap-2">
+              <p className="text-mono text-term-warning">QUEUED</p>
+              {video.retry_count > 0 && (
+                <span className="text-mono text-term-dim">(Retry #{video.retry_count})</span>
+              )}
+            </div>
           )}
           {isDownloading && (
-            <p className="text-mono text-term-info">DOWNLOADING...</p>
+            <p className="text-mono text-term-info">
+              {isResuming ? 'RESUMING...' : 'DOWNLOADING...'}
+            </p>
           )}
         </div>
       </div>

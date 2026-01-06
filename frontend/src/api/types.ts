@@ -2,7 +2,7 @@
  * Video status enum matching backend VideoStatus
  * @see backend/app/schemas.py
  */
-export type VideoStatus = 'pending' | 'downloading' | 'complete' | 'failed' | 'cancelled'
+export type VideoStatus = 'pending' | 'downloading' | 'resuming' | 'complete' | 'failed' | 'cancelled'
 
 /**
  * Video entity matching VideoResponse schema
@@ -23,6 +23,7 @@ export interface Video {
   error_message: string | null
   youtube_url: string
   download_progress: number | null
+  retry_count: number
 }
 
 /**
@@ -76,6 +77,7 @@ export interface QueueStatus {
   pending: number
   processing: number
   total: number
+  max_workers: number
 }
 
 /**

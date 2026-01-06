@@ -13,7 +13,9 @@ from app.schemas import VideoCreate, VideoUpdate, VideoResponse, VideoListRespon
 from app.redis import get_redis
 from app.services.url_validator import validate_youtube_url
 from app.services.ytdlp import YTDLPService
-from app.worker import enqueue_download
+
+# Redis queue key for pending jobs (T028)
+PENDING_QUEUE = "vidkeep:jobs:pending"
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
@@ -59,8 +61,9 @@ async def ingest_video(
             existing_video.error_message = None
             await db.commit()
 
-            # Re-queue the download
-            await enqueue_download(video_id, url)
+            # Re-queue the download via Redis (T028)
+            redis = await get_redis()
+            await redis.lpush(PENDING_QUEUE, video_id)
 
             return IngestResponse(
                 video_id=video_id,
@@ -96,8 +99,9 @@ async def ingest_video(
     db.add(new_video)
     await db.commit()
 
-    # Queue download job
-    await enqueue_download(video_id, url)
+    # Queue download job via Redis (T028)
+    redis = await get_redis()
+    await redis.lpush(PENDING_QUEUE, video_id)
 
     return IngestResponse(
         video_id=video_id,
@@ -204,10 +208,16 @@ async def cancel_download(
     # Set cancellation flag in Redis (expires in 1 hour)
     redis = await get_redis()
     await redis.set(f"cancel:{video_id}", "1", ex=3600)
+    
+    # Remove from Redis queues (may be in pending or processing)
+    await redis.lrem("vidkeep:jobs:pending", 0, video_id)
+    await redis.lrem("vidkeep:jobs:processing", 0, video_id)
 
     # Update video status
     video.status = "cancelled"
     video.error_message = "Download cancelled by user"
+    video.claimed_by = None
+    video.claimed_at = None
     await db.commit()
 
     return CancelResponse(

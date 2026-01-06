@@ -2,7 +2,7 @@
 
 ## 📊 Project Status Overview
 
-**Overall Progress: 29/31 tickets (94%) | Phases 1-6 Complete ✅**
+**Overall Progress: 30/31 tickets (97%) | Phases 1-6 Complete ✅ | T028 Complete ✅**
 
 ### Phase Completion Status
 
@@ -14,7 +14,7 @@
 | **Phase 4: Frontend** | 7/7 | ✅ COMPLETE & TESTED | 100% | ✅ |
 | **Phase 5: Polish** | 4/4 | ✅ COMPLETE | 100% | ✅ |
 | **Phase 6: Enhancements & Fixes** | 7/7 | ✅ COMPLETE | 100% | ✅ |
-| **Phase 7: Future** | 0/2 | 📋 PLANNED | 0% | - |
+| **Phase 7: Future** | 1/2 | 🔨 IN PROGRESS | 50% | ✅ |
 
 ### Key Milestones Achieved
 - ✅ Docker multi-container setup with PostgreSQL, Redis, and FastAPI
@@ -55,20 +55,27 @@ All 29 implementation and bug-fix tickets across 6 phases have been implemented 
   - BUG-004: Fixed video status not updating from queued to downloading
   - iOS safe area support for footer (home indicator area)
 
+- ✅ **Phase 7 T028 Embedded Worker Process Pool Complete:**
+  - Replaced ARQ workers with embedded process pool (WorkerManager)
+  - Redis-based job queue (`vidkeep:jobs:pending`, `vidkeep:jobs:processing`)
+  - Heartbeat-based crash detection and stale job recovery
+  - Download resume from partial files
+  - Prometheus metrics endpoint (`/metrics`) with 7 custom metrics
+  - Retry tracking with max 3 retries
+  - Frontend UI updates: `resuming` status, retry badges
+
 ---
 
 ## Progress Overview
 
-| Metric | Count |
-|--------|-------|
 | Total Tickets | 31 |
-| Completed | 29 |
+| Completed | 30 |
 | In Progress | 0 |
-| Planned | 2 |
+| Planned | 1 |
 
 ## Current Focus
 
-**Core Features Complete!** 2 future tickets planned for Phase 7.
+**T028 Complete!** 1 future ticket planned for Phase 7 (T027 Flutter Mobile App).
 
 ---
 
@@ -162,7 +169,7 @@ Planned future tickets for extended functionality. **📋 PLANNED**
 | Ticket | Title | Type | Status | Priority | Comments |
 |--------|-------|------|--------|----------|----------|
 | [T027](../tickets/T027-flutter-mobile-app.md) | VidKeep Flutter Mobile App | Feature | Planned | Medium | Cross-platform mobile app (Android + iOS) |
-| [T028](../tickets/T028-embedded-worker-process-pool.md) | Embedded Worker Process Pool | Architecture | Planned | Medium | Refactor ARQ workers to embedded process pool |
+| [T028](../tickets/T028-embedded-worker-process-pool.md) | Embedded Worker Process Pool | Architecture | **Complete** | Medium | Replaced ARQ with embedded WorkerManager, Prometheus metrics, resume capability |
 
 ---
 
@@ -192,9 +199,9 @@ T024 (standalone, no dependencies)
 T025 (depends on T019 WebSocket, T021 Queue Status)
 BUG-001, BUG-002, BUG-003, BUG-004 (bug fixes)
 
-Phase 7: Future (not yet implemented):
-T027 (standalone, new Flutter project)
-T028 (depends on T027 or can be independent)
+Phase 7: Future (independent/parallel):
+T027 (Mobile App - standalone)
+T028 (Embedded Workers - architecture refactor)
 ```
 
 ---

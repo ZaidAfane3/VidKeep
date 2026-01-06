@@ -23,6 +23,11 @@ class Video(Base):
     created_at = Column(DateTime, server_default=func.now())
     error_message = Column(Text, nullable=True)
 
+    # Job tracking fields (T028)
+    claimed_by = Column(String(100), nullable=True)
+    claimed_at = Column(DateTime(timezone=True), nullable=True)
+    retry_count = Column(Integer, default=0)
+
     __table_args__ = (
         Index("idx_channel_name", "channel_name"),
         Index("idx_is_favorite", "is_favorite"),

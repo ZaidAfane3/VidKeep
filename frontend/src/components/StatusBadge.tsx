@@ -13,6 +13,10 @@ const statusConfig: Record<VideoStatus, { label: string; className: string }> = 
     label: 'DOWNLOADING',
     className: 'badge-downloading'
   },
+  resuming: {
+    label: 'RESUMING',
+    className: 'badge-downloading'
+  },
   failed: {
     label: 'FAILED',
     className: 'badge-error'

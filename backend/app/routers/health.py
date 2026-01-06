@@ -66,16 +66,16 @@ async def redis_health():
         redis_client = await get_redis()
         info = await redis_client.info("server")
         
-        # Count active workers by finding heartbeat keys
-        worker_keys = await redis_client.keys("vidkeep:worker:*")
-        worker_ids = [key.replace("vidkeep:worker:", "") for key in worker_keys]
+        # Count active downloads by finding heartbeat keys (T028)
+        heartbeat_keys = await redis_client.keys("vidkeep:heartbeat:*")
+        active_video_ids = [key.replace("vidkeep:heartbeat:", "") for key in heartbeat_keys]
         
         return {
             "status": "healthy",
             "version": info.get("redis_version"),
             "workers": {
-                "active": len(worker_ids),
-                "ids": worker_ids
+                "active": len(active_video_ids),
+                "ids": active_video_ids
             }
         }
     except Exception as e:

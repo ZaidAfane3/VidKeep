@@ -1,10 +1,12 @@
 import yt_dlp
 import asyncio
+from datetime import date
 from pathlib import Path
 from typing import Callable, Optional
-from datetime import date
+import time
 
 from app.config import settings
+from app.services.metrics import worker_metrics
 
 # Format string from PROJECT.md
 FORMAT_STRING = 'bestvideo[vcodec^=avc1][height<={max_height}]+bestaudio[acodec^=mp4a]/best[ext=mp4]'
@@ -39,6 +41,20 @@ class YTDLPService:
 
         if progress_callback:
             opts['progress_hooks'] = [progress_callback]
+            
+            # Add postprocessor hook for muxing duration tracking
+            muxing_start = {}
+            
+            def postprocessor_hook(d):
+                if d.get('postprocessor') == 'Merger':
+                    status = d.get('status')
+                    if status == 'started':
+                        muxing_start['time'] = time.time()
+                    elif status == 'finished' and 'time' in muxing_start:
+                        duration = time.time() - muxing_start['time']
+                        worker_metrics.record_muxing(duration)
+            
+            opts['postprocessor_hooks'] = [postprocessor_hook]
 
         return opts
 
@@ -78,8 +94,39 @@ class YTDLPService:
     def get_thumbnail_path(self, video_id: str) -> Path:
         return self.thumbnails_path / f"{video_id}.jpg"
 
-    def cleanup_partial_files(self, video_id: str) -> None:
-        """Remove partial download files (.part, .ytdl, temp files) for a video"""
+    def get_partial_path(self, video_id: str) -> Path | None:
+        """
+        Return path to partial file if it exists, for resume detection.
+        
+        Returns the first found partial file or None.
+        """
+        patterns = [
+            f"{video_id}.mp4.part",
+            f"{video_id}.mp4.part-Frag*",
+            f"{video_id}.f*.mp4",
+            f"{video_id}.f*.m4a",
+        ]
+        for pattern in patterns:
+            matches = list(self.videos_path.glob(pattern))
+            if matches:
+                return matches[0]
+        return None
+
+    def cleanup_partial_files(self, video_id: str, reason: str = "cancelled") -> None:
+        """
+        Remove partial download files based on cleanup reason.
+        
+        Args:
+            video_id: The video ID to clean up
+            reason: One of:
+                - "cancelled": User cancelled, delete everything
+                - "max_retries_exceeded": Failed after all retries, delete everything
+                - "worker_crash_recovery": Keep partial files for resume
+        """
+        if reason == "worker_crash_recovery":
+            # Keep files for resume
+            return
+        
         patterns = [
             f"{video_id}.mp4.part",
             f"{video_id}.mp4.part-*",
@@ -94,6 +141,7 @@ class YTDLPService:
                     file.unlink()
                 except OSError:
                     pass
+
 
 
 def extract_metadata(info: dict) -> dict:
