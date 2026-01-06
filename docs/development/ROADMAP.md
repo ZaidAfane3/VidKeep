@@ -2,7 +2,7 @@
 
 ## 📊 Project Status Overview
 
-**Overall Progress: 26/26 tickets (100%) | Phases 1-6 Complete ✅**
+**Overall Progress: 29/31 tickets (94%) | Phases 1-6 Complete ✅**
 
 ### Phase Completion Status
 
@@ -13,7 +13,8 @@
 | **Phase 3: Streaming Service** | 3/3 | ✅ COMPLETE | 100% | ✅ |
 | **Phase 4: Frontend** | 7/7 | ✅ COMPLETE & TESTED | 100% | ✅ |
 | **Phase 5: Polish** | 4/4 | ✅ COMPLETE | 100% | ✅ |
-| **Phase 6: Enhancements** | 4/4 | ✅ COMPLETE | 100% | ✅ |
+| **Phase 6: Enhancements & Fixes** | 7/7 | ✅ COMPLETE | 100% | ✅ |
+| **Phase 7: Future** | 0/2 | 📋 PLANNED | 0% | - |
 
 ### Key Milestones Achieved
 - ✅ Docker multi-container setup with PostgreSQL, Redis, and FastAPI
@@ -41,14 +42,17 @@
   - Queue status indicator in header (compact and full variants)
   - Mobile polish: touch targets, safe areas, tap highlight removal
 
-### Project Complete! 🎉
-All 26 tickets across 6 phases have been implemented and tested.
+### Core Features Complete! 🎉
+All 29 implementation and bug-fix tickets across 6 phases have been implemented and tested.
 
-- ✅ **Phase 6 Enhancements Complete:**
+- ✅ **Phase 6 Enhancements & Fixes Complete:**
   - T023: Cancel download with Redis flag and partial file cleanup
   - T024: Custom favicon with `>_` terminal prompt design (SVG + PNG)
   - T025: Data saver mode with network detection and polling adjustments
   - BUG-001: WebSocket singleton pattern fixes dev-mode double connections
+  - BUG-002: Fixed Android action buttons triggering when invisible
+  - BUG-003: Fixed download progress resetting at 100% and delayed status color
+  - BUG-004: Fixed video status not updating from queued to downloading
   - iOS safe area support for footer (home indicator area)
 
 ---
@@ -57,14 +61,14 @@ All 26 tickets across 6 phases have been implemented and tested.
 
 | Metric | Count |
 |--------|-------|
-| Total Tickets | 26 |
-| Completed | 26 |
+| Total Tickets | 31 |
+| Completed | 29 |
 | In Progress | 0 |
-| Remaining | 0 |
+| Planned | 2 |
 
 ## Current Focus
 
-**All Features Complete!** All 26 tickets across 6 phases implemented.
+**Core Features Complete!** 2 future tickets planned for Phase 7.
 
 ---
 
@@ -145,6 +149,20 @@ Optional enhancements and bugfixes. **✅ ALL COMPLETE**
 | [T024](../tickets/T024-favicon.md) | Favicon Matching App Logo | Feature | Complete | Low | `>_` terminal prompt, all sizes generated |
 | [T025](../tickets/T025-optimize-data-usage.md) | Optimize Data Usage for Cellular | Feature | Complete | Low | Data saver toggle, polling adjustments |
 | [BUG-001](../tickets/BUG-001-websocket-multiple-connections.md) | WebSocket Multiple Connections (Dev) | Bug | Complete | Low | Singleton WebSocket pattern implemented |
+| [BUG-002](../tickets/BUG-002-android-action-buttons-invisible-click.md) | Android Action Buttons Invisible Click | Bug | Complete | Medium | Added `e.preventDefault()` in touchEnd, media query for hover |
+| [BUG-003](../tickets/BUG-003-download-progress-reset-and-delayed-status.md) | Download Progress Reset at 100% | Bug | Complete | Low | Backend sends completion messages, frontend auto-refreshes |
+| [BUG-004](../tickets/BUG-004-video-status-not-updating-queued-to-downloading.md) | Video Status Not Updating Queued→Downloading | Bug | Complete | Medium | Infer status from progress, WebSocket status messages |
+
+---
+
+## Phase 7: Future Enhancements
+
+Planned future tickets for extended functionality. **📋 PLANNED**
+
+| Ticket | Title | Type | Status | Priority | Comments |
+|--------|-------|------|--------|----------|----------|
+| [T027](../tickets/T027-flutter-mobile-app.md) | VidKeep Flutter Mobile App | Feature | Planned | Medium | Cross-platform mobile app (Android + iOS) |
+| [T028](../tickets/T028-embedded-worker-process-pool.md) | Embedded Worker Process Pool | Architecture | Planned | Medium | Refactor ARQ workers to embedded process pool |
 
 ---
 
@@ -172,7 +190,11 @@ Phase 6: Enhancements & Fixes (can be implemented anytime):
 T023 (depends on T006 worker infrastructure)
 T024 (standalone, no dependencies)
 T025 (depends on T019 WebSocket, T021 Queue Status)
-BUG-001 (depends on T019 WebSocket)
+BUG-001, BUG-002, BUG-003, BUG-004 (bug fixes)
+
+Phase 7: Future (not yet implemented):
+T027 (standalone, new Flutter project)
+T028 (depends on T027 or can be independent)
 ```
 
 ---

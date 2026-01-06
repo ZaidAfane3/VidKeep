@@ -454,9 +454,259 @@ spec:
 
 ---
 
-## 10. Testing Plan
+## 10. Resource Monitoring & Metrics
 
-### 10.1 Unit Tests
+Track worker resource utilization for future optimization.
+
+### 10.1 Per-Worker Metrics to Collect
+
+| Metric | Description | How to Collect |
+|--------|-------------|----------------|
+| `worker_cpu_percent` | CPU usage per worker process | `psutil.Process(pid).cpu_percent()` |
+| `worker_memory_mb` | Memory usage per worker | `psutil.Process(pid).memory_info().rss / 1024 / 1024` |
+| `worker_download_duration_seconds` | Time from start to complete | Track in WorkerProcess |
+| `worker_muxing_duration_seconds` | FFmpeg merge time specifically | Measure post-processing phase |
+| `worker_bytes_downloaded` | Total bytes per download | From yt-dlp progress |
+| `worker_download_speed_mbps` | Average download speed | `bytes / duration` |
+
+### 10.2 Worker Metrics Implementation
+
+```python
+# backend/app/services/worker_metrics.py
+import psutil
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Optional
+
+@dataclass
+class WorkerMetrics:
+    """Metrics for a single download worker."""
+    worker_id: str
+    video_id: str
+    started_at: datetime
+    pid: int
+    
+    # Filled during download
+    peak_cpu_percent: float = 0.0
+    peak_memory_mb: float = 0.0
+    avg_cpu_percent: float = 0.0
+    total_bytes: int = 0
+    download_speed_mbps: float = 0.0
+    
+    # Filled on completion
+    completed_at: Optional[datetime] = None
+    muxing_duration_seconds: float = 0.0
+    status: str = "running"  # running, completed, failed
+    
+    _cpu_samples: list[float] = field(default_factory=list)
+
+
+class WorkerMetricsCollector:
+    """Collects and exposes worker metrics."""
+    
+    def __init__(self):
+        self.active_metrics: dict[str, WorkerMetrics] = {}
+        self.completed_metrics: list[WorkerMetrics] = []  # Rolling buffer
+        self._max_completed = 100  # Keep last 100 downloads
+    
+    def start_tracking(self, worker_id: str, video_id: str, pid: int):
+        """Start tracking a new worker."""
+        self.active_metrics[worker_id] = WorkerMetrics(
+            worker_id=worker_id,
+            video_id=video_id,
+            started_at=datetime.utcnow(),
+            pid=pid
+        )
+    
+    def sample_resources(self, worker_id: str):
+        """Sample current CPU/memory for a worker."""
+        metrics = self.active_metrics.get(worker_id)
+        if not metrics:
+            return
+        
+        try:
+            proc = psutil.Process(metrics.pid)
+            cpu = proc.cpu_percent()
+            mem = proc.memory_info().rss / 1024 / 1024  # MB
+            
+            metrics._cpu_samples.append(cpu)
+            metrics.peak_cpu_percent = max(metrics.peak_cpu_percent, cpu)
+            metrics.peak_memory_mb = max(metrics.peak_memory_mb, mem)
+        except psutil.NoSuchProcess:
+            pass
+    
+    def complete_tracking(self, worker_id: str, status: str, **extra):
+        """Mark worker as completed and archive metrics."""
+        metrics = self.active_metrics.pop(worker_id, None)
+        if not metrics:
+            return
+        
+        metrics.completed_at = datetime.utcnow()
+        metrics.status = status
+        
+        if metrics._cpu_samples:
+            metrics.avg_cpu_percent = sum(metrics._cpu_samples) / len(metrics._cpu_samples)
+        
+        for key, value in extra.items():
+            if hasattr(metrics, key):
+                setattr(metrics, key, value)
+        
+        self.completed_metrics.append(metrics)
+        if len(self.completed_metrics) > self._max_completed:
+            self.completed_metrics.pop(0)
+    
+    def get_summary(self) -> dict:
+        """Get aggregated metrics summary."""
+        if not self.completed_metrics:
+            return {"message": "No completed downloads yet"}
+        
+        return {
+            "total_downloads": len(self.completed_metrics),
+            "avg_cpu_percent": sum(m.avg_cpu_percent for m in self.completed_metrics) / len(self.completed_metrics),
+            "avg_peak_cpu_percent": sum(m.peak_cpu_percent for m in self.completed_metrics) / len(self.completed_metrics),
+            "avg_peak_memory_mb": sum(m.peak_memory_mb for m in self.completed_metrics) / len(self.completed_metrics),
+            "avg_duration_seconds": sum(
+                (m.completed_at - m.started_at).total_seconds() 
+                for m in self.completed_metrics if m.completed_at
+            ) / len(self.completed_metrics),
+            "avg_download_speed_mbps": sum(m.download_speed_mbps for m in self.completed_metrics) / len(self.completed_metrics),
+        }
+
+
+# Global instance
+worker_metrics = WorkerMetricsCollector()
+```
+
+### 10.3 Metrics API Endpoint
+
+```python
+# backend/app/routers/metrics.py
+from fastapi import APIRouter
+from app.services.worker_metrics import worker_metrics
+from app.services.worker_manager import worker_manager
+
+router = APIRouter(prefix="/api/metrics", tags=["metrics"])
+
+@router.get("/workers")
+async def get_worker_metrics():
+    """Get current and historical worker metrics."""
+    return {
+        "active_workers": [
+            {
+                "worker_id": m.worker_id,
+                "video_id": m.video_id,
+                "running_seconds": (datetime.utcnow() - m.started_at).total_seconds(),
+                "current_cpu_percent": m.peak_cpu_percent,
+                "current_memory_mb": m.peak_memory_mb,
+            }
+            for m in worker_metrics.active_metrics.values()
+        ],
+        "summary": worker_metrics.get_summary(),
+        "config": {
+            "max_workers": worker_manager.max_workers,
+            "active_count": len(worker_manager.active_workers),
+        }
+    }
+
+@router.get("/workers/history")
+async def get_worker_history(limit: int = 20):
+    """Get recent completed download metrics."""
+    return {
+        "downloads": [
+            {
+                "video_id": m.video_id,
+                "duration_seconds": (m.completed_at - m.started_at).total_seconds() if m.completed_at else None,
+                "avg_cpu_percent": m.avg_cpu_percent,
+                "peak_cpu_percent": m.peak_cpu_percent,
+                "peak_memory_mb": m.peak_memory_mb,
+                "download_speed_mbps": m.download_speed_mbps,
+                "status": m.status,
+            }
+            for m in worker_metrics.completed_metrics[-limit:]
+        ]
+    }
+```
+
+### 10.4 Prometheus Metrics (Optional)
+
+For production K8s deployments, expose metrics in Prometheus format:
+
+```python
+# backend/app/services/prometheus_metrics.py
+from prometheus_client import Counter, Gauge, Histogram
+
+# Gauges (current state)
+active_workers = Gauge('vidkeep_active_workers', 'Number of active download workers')
+worker_cpu_percent = Gauge('vidkeep_worker_cpu_percent', 'CPU usage per worker', ['worker_id'])
+worker_memory_mb = Gauge('vidkeep_worker_memory_mb', 'Memory usage per worker', ['worker_id'])
+
+# Counters (totals)
+downloads_total = Counter('vidkeep_downloads_total', 'Total downloads', ['status'])
+
+# Histograms (distributions)
+download_duration = Histogram(
+    'vidkeep_download_duration_seconds',
+    'Download duration in seconds',
+    buckets=[30, 60, 120, 300, 600, 1200, 3600]
+)
+peak_cpu = Histogram(
+    'vidkeep_worker_peak_cpu_percent',
+    'Peak CPU usage during download',
+    buckets=[10, 25, 50, 75, 100, 150, 200]
+)
+```
+
+### 10.5 Resource Sizing Recommendations
+
+Add to the `/api/metrics/recommendations` endpoint:
+
+```python
+@router.get("/recommendations")
+async def get_resource_recommendations():
+    """Get recommended resource settings based on historical data."""
+    summary = worker_metrics.get_summary()
+    
+    if summary.get("message"):
+        return {"message": "Need more data - complete at least 10 downloads"}
+    
+    avg_peak_cpu = summary["avg_peak_cpu_percent"]
+    avg_peak_mem = summary["avg_peak_memory_mb"]
+    
+    return {
+        "current_max_workers": settings.max_workers,
+        "observed_metrics": {
+            "avg_peak_cpu_per_worker": f"{avg_peak_cpu:.1f}%",
+            "avg_peak_memory_per_worker": f"{avg_peak_mem:.0f}MB",
+        },
+        "recommendations": {
+            "cpu_per_worker": f"{max(250, int(avg_peak_cpu * 10))}m",  # millicores
+            "memory_per_worker": f"{max(256, int(avg_peak_mem * 1.5))}Mi",
+            "suggested_pod_cpu": f"{settings.max_workers * max(250, int(avg_peak_cpu * 10)) + 250}m",
+            "suggested_pod_memory": f"{settings.max_workers * max(256, int(avg_peak_mem * 1.5)) + 256}Mi",
+        },
+        "notes": [
+            "CPU spikes during FFmpeg muxing phase",
+            "Memory usage varies with video quality",
+            "Consider 20% headroom above recommendations",
+        ]
+    }
+```
+
+### 10.6 File Changes for Metrics
+
+| File | Action | Description |
+|------|--------|-------------|
+| `backend/app/services/worker_metrics.py` | **New** | Metrics collection service |
+| `backend/app/routers/metrics.py` | **New** | Metrics API endpoints |
+| `backend/app/services/prometheus_metrics.py` | **New** (optional) | Prometheus integration |
+| `backend/app/main.py` | Modify | Register metrics router |
+| `backend/requirements.txt` | Modify | Add `psutil`, optionally `prometheus-client` |
+
+---
+
+## 11. Testing Plan
+
+### 11.1 Unit Tests
 
 - [ ] `WorkerManager` initialization and configuration
 - [ ] Job claiming with atomic Redis operations
@@ -464,7 +714,7 @@ spec:
 - [ ] Stale job detection logic
 - [ ] Resume-aware cleanup logic
 
-### 10.2 Integration Tests
+### 11.2 Integration Tests
 
 - [ ] End-to-end download with embedded worker
 - [ ] Graceful shutdown preserves job state
@@ -472,7 +722,7 @@ spec:
 - [ ] Resume download after worker restart (verify partial files used)
 - [ ] Concurrent downloads respects `MAX_WORKERS` limit
 
-### 10.3 Manual Testing
+### 11.3 Manual Testing
 
 1. **Basic Flow**: Submit URL → verify download completes
 2. **Concurrency**: Submit 3 URLs with `MAX_WORKERS=2` → verify 2 concurrent, 1 queued
@@ -483,7 +733,7 @@ spec:
 
 ---
 
-## 11. Migration Path
+## 12. Migration Path
 
 ### Phase 1: Implement alongside ARQ (feature flag)
 - Add embedded worker code under feature flag
@@ -500,7 +750,7 @@ spec:
 
 ---
 
-## 12. Open Questions
+## 13. Open Questions
 
 1. **Progress tracking during resume**: Should we track bytes already downloaded and show accurate resume progress, or start from 0% visually?
 
@@ -510,7 +760,7 @@ spec:
 
 ---
 
-## 13. References
+## 14. References
 
 - [yt-dlp Resume Documentation](https://github.com/yt-dlp/yt-dlp#filesystem-options)
 - Existing tickets: T005-arq-worker.md, T019-websocket-progress.md, T026-monolith-merge
