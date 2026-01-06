@@ -226,7 +226,7 @@ function AppContent() {
       <footer className="fixed bottom-0 left-0 right-0 bg-term-bg border-t border-term-dim z-30 pb-safe">
         <div className="max-w-[1440px] mx-auto px-4 h-6 flex items-center justify-between">
           <span className="text-mono text-term-primary/40 uppercase">
-            VidKeep v1.1.0
+            VidKeep v1.6.0
           </span>
           <div className="flex items-center gap-2 sm:gap-4">
             {/* Worker count - hidden on very small screens */}
