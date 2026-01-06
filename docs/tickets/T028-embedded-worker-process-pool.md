@@ -386,6 +386,21 @@ async def _stale_job_recovery_loop(self):
 
 ---
 
+### 8.4 Zombie Process Prevention
+
+> [!WARNING]
+> **Zombie Processes Risk**: When managing raw subprocesses in containers, if the parent process (FastAPI) crashes hard or is OOM-killed, subprocesses can become "zombies" if PID 1 doesn't reap them appropriately.
+
+**Mitigation**:
+Ensure the Docker image uses an init system (like `tini` or `dumb-init`) as the entrypoint.
+
+```dockerfile
+# Dockerfile example
+ENTRYPOINT ["/usr/bin/tini", "--", "/start.sh"]
+```
+
+---
+
 ## 9. Kubernetes Deployment
 
 ### 9.1 Single Deployment Manifest
@@ -456,273 +471,317 @@ spec:
 
 ## 10. Resource Monitoring & Metrics
 
-Track worker resource utilization for future optimization.
+Track worker resource utilization using Prometheus-native metrics.
 
-### 10.1 Per-Worker Metrics to Collect
+### 10.1 Architecture
 
-| Metric | Description | How to Collect |
-|--------|-------------|----------------|
-| `worker_cpu_percent` | CPU usage per worker process | `psutil.Process(pid).cpu_percent()` |
-| `worker_memory_mb` | Memory usage per worker | `psutil.Process(pid).memory_info().rss / 1024 / 1024` |
-| `worker_download_duration_seconds` | Time from start to complete | Track in WorkerProcess |
-| `worker_muxing_duration_seconds` | FFmpeg merge time specifically | Measure post-processing phase |
-| `worker_bytes_downloaded` | Total bytes per download | From yt-dlp progress |
-| `worker_download_speed_mbps` | Average download speed | `bytes / duration` |
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   VidKeep API   │────▶│   Prometheus    │────▶│    Grafana      │
+│   /metrics      │     │   (scrape)      │     │   (dashboards)  │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                                                        │
+                                                        ▼
+                                                ┌─────────────────┐
+                                                │  Alertmanager   │
+                                                │  (optional)     │
+                                                └─────────────────┘
+```
 
-### 10.2 Worker Metrics Implementation
+> [!TIP]
+> Let Prometheus handle retention and Grafana handle aggregation/recommendations. No custom JSON APIs needed.
+
+### 10.2 Metrics Reference
+
+| Metric Name | Type | Labels | Description |
+|-------------|------|--------|-------------|
+| `vidkeep_download_duration_seconds` | Histogram | `quality`, `source` | Total time from download start to completion. Buckets: 10s, 30s, 60s, 2m, 5m, 10m, 30m |
+| `vidkeep_muxing_duration_seconds` | Histogram | - | Time spent in FFmpeg merging video+audio. This is the CPU-intensive phase. Buckets: 5s, 15s, 30s, 1m, 2m, 5m |
+| `vidkeep_download_speed_mbps` | Histogram | - | Download speed distribution. Buckets: 1, 5, 10, 25, 50, 100, 200 Mbps |
+| `vidkeep_active_workers` | Gauge | - | Number of currently active download worker processes |
+| `vidkeep_worker_memory_mb` | Gauge | `worker_id` | Memory usage per worker process in MB |
+| `vidkeep_worker_cpu_percent` | Gauge | `worker_id` | CPU usage per worker process (0-100+) |
+| `vidkeep_downloads_total` | Counter | `status` | Cumulative count of downloads. Status: `completed`, `failed`, `cancelled` |
+
+> [!NOTE]
+> **Counter for Failures**: We use a **Counter** for `vidkeep_downloads_total` with `status="failed"` to track the *rate* of failures over time. Since failure is a terminal state, a Gauge (for "currently failing") is not required.
+
+**Metric Types:**
+- **Histogram**: Tracks distribution of values across buckets. Use `histogram_quantile()` for percentiles.
+- **Gauge**: Current value that can go up or down. Sampled at each Prometheus scrape.
+- **Counter**: Cumulative total that only increases. Use `rate()` for per-second rates.
+
+### 10.3 Prometheus Metrics Definition
 
 ```python
-# backend/app/services/worker_metrics.py
+# backend/app/services/metrics.py
+from prometheus_client import Histogram, Gauge, Counter
 import psutil
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Optional
 
-@dataclass
+# Histograms for distributions
+DOWNLOAD_DURATION = Histogram(
+    'vidkeep_download_duration_seconds',
+    'Time spent downloading',
+    ['quality', 'source'],
+    buckets=[10, 30, 60, 120, 300, 600, 1800]
+)
+
+MUXING_DURATION = Histogram(
+    'vidkeep_muxing_duration_seconds',
+    'Time spent in FFmpeg muxing',
+    buckets=[5, 15, 30, 60, 120, 300]
+)
+
+DOWNLOAD_SPEED = Histogram(
+    'vidkeep_download_speed_mbps',
+    'Download speed distribution',
+    buckets=[1, 5, 10, 25, 50, 100, 200]
+)
+
+# Gauges for current state
+ACTIVE_WORKERS = Gauge(
+    'vidkeep_active_workers',
+    'Currently active download workers'
+)
+
+WORKER_MEMORY = Gauge(
+    'vidkeep_worker_memory_mb',
+    'Worker memory usage',
+    ['worker_id']
+)
+
+WORKER_CPU = Gauge(
+    'vidkeep_worker_cpu_percent',
+    'Worker CPU usage',
+    ['worker_id']
+)
+
+# Counters for totals
+DOWNLOADS_TOTAL = Counter(
+    'vidkeep_downloads_total',
+    'Total downloads by status',
+    ['status']  # completed, failed, cancelled
+)
+
+
 class WorkerMetrics:
-    """Metrics for a single download worker."""
-    worker_id: str
-    video_id: str
-    started_at: datetime
-    pid: int
+    """Collects and emits worker metrics to Prometheus."""
     
-    # Filled during download
-    peak_cpu_percent: float = 0.0
-    peak_memory_mb: float = 0.0
-    avg_cpu_percent: float = 0.0
-    total_bytes: int = 0
-    download_speed_mbps: float = 0.0
+    def record_download_complete(self, quality: str, duration: float, speed_mbps: float):
+        DOWNLOAD_DURATION.labels(quality=quality, source='youtube').observe(duration)
+        DOWNLOAD_SPEED.observe(speed_mbps)
+        DOWNLOADS_TOTAL.labels(status='completed').inc()
     
-    # Filled on completion
-    completed_at: Optional[datetime] = None
-    muxing_duration_seconds: float = 0.0
-    status: str = "running"  # running, completed, failed
+    def record_muxing(self, duration: float):
+        MUXING_DURATION.observe(duration)
     
-    _cpu_samples: list[float] = field(default_factory=list)
-
-
-class WorkerMetricsCollector:
-    """Collects and exposes worker metrics."""
+    def record_failure(self):
+        DOWNLOADS_TOTAL.labels(status='failed').inc()
     
-    def __init__(self):
-        self.active_metrics: dict[str, WorkerMetrics] = {}
-        self.completed_metrics: list[WorkerMetrics] = []  # Rolling buffer
-        self._max_completed = 100  # Keep last 100 downloads
+    def record_cancelled(self):
+        DOWNLOADS_TOTAL.labels(status='cancelled').inc()
     
-    def start_tracking(self, worker_id: str, video_id: str, pid: int):
-        """Start tracking a new worker."""
-        self.active_metrics[worker_id] = WorkerMetrics(
-            worker_id=worker_id,
-            video_id=video_id,
-            started_at=datetime.utcnow(),
-            pid=pid
-        )
-    
-    def sample_resources(self, worker_id: str):
-        """Sample current CPU/memory for a worker."""
-        metrics = self.active_metrics.get(worker_id)
-        if not metrics:
-            return
-        
+    def update_worker_resources(self, worker_id: str, pid: int):
         try:
-            proc = psutil.Process(metrics.pid)
-            cpu = proc.cpu_percent()
-            mem = proc.memory_info().rss / 1024 / 1024  # MB
-            
-            metrics._cpu_samples.append(cpu)
-            metrics.peak_cpu_percent = max(metrics.peak_cpu_percent, cpu)
-            metrics.peak_memory_mb = max(metrics.peak_memory_mb, mem)
+            proc = psutil.Process(pid)
+            WORKER_MEMORY.labels(worker_id=worker_id).set(
+                proc.memory_info().rss / 1024 / 1024
+            )
+            WORKER_CPU.labels(worker_id=worker_id).set(proc.cpu_percent())
         except psutil.NoSuchProcess:
             pass
     
-    def complete_tracking(self, worker_id: str, status: str, **extra):
-        """Mark worker as completed and archive metrics."""
-        metrics = self.active_metrics.pop(worker_id, None)
-        if not metrics:
-            return
-        
-        metrics.completed_at = datetime.utcnow()
-        metrics.status = status
-        
-        if metrics._cpu_samples:
-            metrics.avg_cpu_percent = sum(metrics._cpu_samples) / len(metrics._cpu_samples)
-        
-        for key, value in extra.items():
-            if hasattr(metrics, key):
-                setattr(metrics, key, value)
-        
-        self.completed_metrics.append(metrics)
-        if len(self.completed_metrics) > self._max_completed:
-            self.completed_metrics.pop(0)
+    def set_active_workers(self, count: int):
+        ACTIVE_WORKERS.set(count)
     
-    def get_summary(self) -> dict:
-        """Get aggregated metrics summary."""
-        if not self.completed_metrics:
-            return {"message": "No completed downloads yet"}
-        
-        return {
-            "total_downloads": len(self.completed_metrics),
-            "avg_cpu_percent": sum(m.avg_cpu_percent for m in self.completed_metrics) / len(self.completed_metrics),
-            "avg_peak_cpu_percent": sum(m.peak_cpu_percent for m in self.completed_metrics) / len(self.completed_metrics),
-            "avg_peak_memory_mb": sum(m.peak_memory_mb for m in self.completed_metrics) / len(self.completed_metrics),
-            "avg_duration_seconds": sum(
-                (m.completed_at - m.started_at).total_seconds() 
-                for m in self.completed_metrics if m.completed_at
-            ) / len(self.completed_metrics),
-            "avg_download_speed_mbps": sum(m.download_speed_mbps for m in self.completed_metrics) / len(self.completed_metrics),
-        }
+    def clear_worker(self, worker_id: str):
+        """Remove worker from gauges when done."""
+        WORKER_MEMORY.remove(worker_id)
+        WORKER_CPU.remove(worker_id)
 
 
 # Global instance
-worker_metrics = WorkerMetricsCollector()
+worker_metrics = WorkerMetrics()
 ```
 
-### 10.3 Metrics API Endpoint
+### 10.4 Metrics Endpoint
 
 ```python
 # backend/app/routers/metrics.py
 from fastapi import APIRouter
-from app.services.worker_metrics import worker_metrics
-from app.services.worker_manager import worker_manager
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from starlette.responses import Response
 
-router = APIRouter(prefix="/api/metrics", tags=["metrics"])
+router = APIRouter()
 
-@router.get("/workers")
-async def get_worker_metrics():
-    """Get current and historical worker metrics."""
-    return {
-        "active_workers": [
-            {
-                "worker_id": m.worker_id,
-                "video_id": m.video_id,
-                "running_seconds": (datetime.utcnow() - m.started_at).total_seconds(),
-                "current_cpu_percent": m.peak_cpu_percent,
-                "current_memory_mb": m.peak_memory_mb,
-            }
-            for m in worker_metrics.active_metrics.values()
-        ],
-        "summary": worker_metrics.get_summary(),
-        "config": {
-            "max_workers": worker_manager.max_workers,
-            "active_count": len(worker_manager.active_workers),
-        }
-    }
-
-@router.get("/workers/history")
-async def get_worker_history(limit: int = 20):
-    """Get recent completed download metrics."""
-    return {
-        "downloads": [
-            {
-                "video_id": m.video_id,
-                "duration_seconds": (m.completed_at - m.started_at).total_seconds() if m.completed_at else None,
-                "avg_cpu_percent": m.avg_cpu_percent,
-                "peak_cpu_percent": m.peak_cpu_percent,
-                "peak_memory_mb": m.peak_memory_mb,
-                "download_speed_mbps": m.download_speed_mbps,
-                "status": m.status,
-            }
-            for m in worker_metrics.completed_metrics[-limit:]
-        ]
-    }
+@router.get("/metrics")
+async def metrics():
+    """Prometheus-compatible metrics endpoint."""
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 ```
 
-### 10.4 Prometheus Metrics (Optional)
-
-For production K8s deployments, expose metrics in Prometheus format:
-
-```python
-# backend/app/services/prometheus_metrics.py
-from prometheus_client import Counter, Gauge, Histogram
-
-# Gauges (current state)
-active_workers = Gauge('vidkeep_active_workers', 'Number of active download workers')
-worker_cpu_percent = Gauge('vidkeep_worker_cpu_percent', 'CPU usage per worker', ['worker_id'])
-worker_memory_mb = Gauge('vidkeep_worker_memory_mb', 'Memory usage per worker', ['worker_id'])
-
-# Counters (totals)
-downloads_total = Counter('vidkeep_downloads_total', 'Total downloads', ['status'])
-
-# Histograms (distributions)
-download_duration = Histogram(
-    'vidkeep_download_duration_seconds',
-    'Download duration in seconds',
-    buckets=[30, 60, 120, 300, 600, 1200, 3600]
-)
-peak_cpu = Histogram(
-    'vidkeep_worker_peak_cpu_percent',
-    'Peak CPU usage during download',
-    buckets=[10, 25, 50, 75, 100, 150, 200]
-)
-```
-
-### 10.5 Resource Sizing Recommendations
-
-Add to the `/api/metrics/recommendations` endpoint:
-
-```python
-@router.get("/recommendations")
-async def get_resource_recommendations():
-    """Get recommended resource settings based on historical data."""
-    summary = worker_metrics.get_summary()
-    
-    if summary.get("message"):
-        return {"message": "Need more data - complete at least 10 downloads"}
-    
-    avg_peak_cpu = summary["avg_peak_cpu_percent"]
-    avg_peak_mem = summary["avg_peak_memory_mb"]
-    
-    return {
-        "current_max_workers": settings.max_workers,
-        "observed_metrics": {
-            "avg_peak_cpu_per_worker": f"{avg_peak_cpu:.1f}%",
-            "avg_peak_memory_per_worker": f"{avg_peak_mem:.0f}MB",
-        },
-        "recommendations": {
-            "cpu_per_worker": f"{max(250, int(avg_peak_cpu * 10))}m",  # millicores
-            "memory_per_worker": f"{max(256, int(avg_peak_mem * 1.5))}Mi",
-            "suggested_pod_cpu": f"{settings.max_workers * max(250, int(avg_peak_cpu * 10)) + 250}m",
-            "suggested_pod_memory": f"{settings.max_workers * max(256, int(avg_peak_mem * 1.5)) + 256}Mi",
-        },
-        "notes": [
-            "CPU spikes during FFmpeg muxing phase",
-            "Memory usage varies with video quality",
-            "Consider 20% headroom above recommendations",
-        ]
-    }
-```
-
-### 10.6 File Changes for Metrics
+### 10.5 File Changes for Metrics
 
 | File | Action | Description |
 |------|--------|-------------|
-| `backend/app/services/worker_metrics.py` | **New** | Metrics collection service |
-| `backend/app/routers/metrics.py` | **New** | Metrics API endpoints |
-| `backend/app/services/prometheus_metrics.py` | **New** (optional) | Prometheus integration |
+| `backend/app/services/metrics.py` | **New** | Prometheus metrics + collection |
+| `backend/app/routers/metrics.py` | **New** | `/metrics` endpoint |
 | `backend/app/main.py` | Modify | Register metrics router |
-| `backend/requirements.txt` | Modify | Add `psutil`, optionally `prometheus-client` |
+| `backend/requirements.txt` | Modify | Add `psutil`, `prometheus-client` |
 
 ---
 
-## 11. Testing Plan
+## 11. Frontend UI Synchronization
 
-### 11.1 Unit Tests
+Update the frontend to reflect the new worker architecture with proper status sync.
+
+### 11.1 Status Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     VIDEO STATUS LIFECYCLE                           │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   QUEUED ─────▶ DOWNLOADING ─────▶ COMPLETE                         │
+│     │               │                  │                             │
+│     │               ├─────▶ FAILED     │                             │
+│     │               │                  │                             │
+│     │               └─────▶ CANCELLED  │                             │
+│     │                                  │                             │
+│     └──────────────────────────────────┘                            │
+│              (re-queue on recovery)                                  │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 11.2 WebSocket Message Types
+
+Current implementation supports these message types (no changes required):
+
+| Message Type | When Sent | Payload |
+|--------------|-----------|---------|
+| `status` | Status transition (queued→downloading) | `{ type: "status", status: "downloading", video_id }` |
+| `progress` | During download | `{ percent, downloaded_bytes, total_bytes, video_id }` |
+| `completion` | Download finished | `{ type: "completion", status: "complete" \| "failed" \| "cancelled", video_id }` |
+
+### 11.3 New Status: "Resuming"
+
+When a download resumes from partial file, show visual feedback:
+
+```typescript
+// frontend/src/types/video.ts
+export type VideoStatus = 
+  | 'queued' 
+  | 'downloading' 
+  | 'resuming'    // NEW: Resuming from partial file
+  | 'complete' 
+  | 'failed' 
+  | 'cancelled'
+```
+
+```python
+# backend/app/tasks/download.py - Add resume detection
+async def download_video(ctx, video_id: str, url: str):
+    # Check if resuming from partial file
+    partial_file = ytdlp.get_partial_path(video_id)
+    is_resuming = partial_file.exists()
+    
+    if is_resuming:
+        await redis.publish(
+            f"progress:{video_id}",
+            json.dumps({
+                "type": "status",
+                "status": "resuming",
+                "video_id": video_id,
+                "resumed_bytes": partial_file.stat().st_size
+            })
+        )
+```
+
+### 11.4 VideoCard UI Updates
+
+Update the video card to show worker status:
+
+```typescript
+// frontend/src/components/VideoCard.tsx
+
+// Existing flashing indicator logic (no changes needed)
+const isDownloading = video.status === 'downloading' || video.status === 'resuming'
+
+// Add retry badge if video was re-queued
+{video.retry_count > 0 && video.status === 'queued' && (
+  <span className="retry-badge">Retry #{video.retry_count}</span>
+)}
+
+// Show "Resuming" instead of "Downloading" when applicable
+{video.status === 'resuming' && (
+  <span className="status-text">Resuming from {formatBytes(video.resumed_bytes)}...</span>
+)}
+```
+
+### 11.5 Queue Position Indicator
+
+Show users their position in queue when multiple downloads are queued:
+
+```typescript
+// frontend/src/components/QueueStatus.tsx
+interface QueueInfo {
+  position: number
+  total_queued: number
+  active_downloads: number
+  max_workers: number
+}
+
+// API endpoint to add
+// GET /api/queue/status
+// Returns: { queued_count, active_count, max_workers }
+```
+
+```python
+# backend/app/routers/queue.py
+@router.get("/api/queue/status")
+async def get_queue_status():
+    return {
+        "queued_count": await redis.llen("vidkeep:jobs:pending"),
+        "active_count": len(worker_manager.active_workers),
+        "max_workers": settings.max_workers,
+    }
+```
+
+### 11.6 File Changes for UI
+
+| File | Action | Description |
+|------|--------|-------------|
+| `frontend/src/types/video.ts` | Modify | Add `resuming` status type |
+| `frontend/src/components/VideoCard.tsx` | Modify | Handle resume and retry display |
+| `frontend/src/components/QueueStatus.tsx` | Modify | Show active workers / capacity |
+| `backend/app/routers/queue.py` | Modify | Add queue status endpoint |
+| `backend/app/models.py` | Modify | Expose `retry_count` in API response |
+
+---
+
+## 12. Testing Plan
+
+### 12.1 Unit Tests
 
 - [ ] `WorkerManager` initialization and configuration
 - [ ] Job claiming with atomic Redis operations
 - [ ] Heartbeat generation and expiry
 - [ ] Stale job detection logic
 - [ ] Resume-aware cleanup logic
+- [ ] Prometheus metrics recording
 
-### 11.2 Integration Tests
+### 12.2 Integration Tests
 
 - [ ] End-to-end download with embedded worker
 - [ ] Graceful shutdown preserves job state
 - [ ] Stale job recovery after simulated crash
 - [ ] Resume download after worker restart (verify partial files used)
 - [ ] Concurrent downloads respects `MAX_WORKERS` limit
+- [ ] WebSocket status updates for queued→downloading→complete
+- [ ] WebSocket resume status when resuming partial download
 
-### 11.3 Manual Testing
+### 12.3 Manual Testing
 
 1. **Basic Flow**: Submit URL → verify download completes
 2. **Concurrency**: Submit 3 URLs with `MAX_WORKERS=2` → verify 2 concurrent, 1 queued
@@ -730,10 +789,11 @@ async def get_resource_recommendations():
 4. **Resume**: Kill pod at 50% → verify new pod resumes from 50%
 5. **Cancellation**: Cancel mid-download → verify cleanup works
 6. **Max Retries**: Force 3 failures → verify job marked failed
+7. **UI Sync**: Verify flashing indicator → progress bar → complete transition
 
 ---
 
-## 12. Migration Path
+## 13. Migration Path
 
 ### Phase 1: Implement alongside ARQ (feature flag)
 - Add embedded worker code under feature flag
@@ -750,18 +810,106 @@ async def get_resource_recommendations():
 
 ---
 
-## 13. Open Questions
+## 14. Architecture Decisions
 
-1. **Progress tracking during resume**: Should we track bytes already downloaded and show accurate resume progress, or start from 0% visually?
+1. **Progress tracking during resume**:
+    - **Decision**: Track accurate progress.
+    - **Rationale**: `yt-dlp` output allows calculating percentage relative to the *full* file size. Showing "60%" immediately upon resume instills confidence that the resume worked, whereas starting visual progress from "0%" feels broken.
 
-2. **Multi-pod job visibility**: Should the API show which pod is processing a download?
+2. **Multi-pod job visibility**:
+    - **Decision**: No.
+    - **Rationale**: The client/user shouldn't care which pod is downloading the file. That is an implementation detail. The API should remain abstract.
 
-3. **Resource limits per worker**: Should we add CPU/memory limits per worker process, or just per pod?
+3. **Resource limits per worker**:
+    - **Decision**: Manage limits **Per Pod**.
+    - **Rationale**: Managing CGroup limits per subprocess in Python is complex and brittle. We will rely on K8s Pod limits. If a worker goes rogue, it hits the Pod limit, K8s OOM kills the pod, and the existing recovery logic moves the job to another pod.
 
 ---
 
-## 14. References
+## 15. References
 
 - [yt-dlp Resume Documentation](https://github.com/yt-dlp/yt-dlp#filesystem-options)
 - Existing tickets: T005-arq-worker.md, T019-websocket-progress.md, T026-monolith-merge
 - Current implementation: `backend/app/worker.py`, `backend/app/tasks/download.py`
+
+---
+
+# Appendix A: Infrastructure Configuration (Out of Scope)
+
+> [!IMPORTANT]
+> The following configurations are **external infrastructure** that must be set up separately from the application. They are documented here for reference but are **NOT part of this ticket's implementation scope**.
+
+## A.1 Prometheus Setup
+
+Prometheus must be deployed separately (via Helm chart, operator, or manual deployment) and configured to scrape the VidKeep `/metrics` endpoint.
+
+## A.2 Kubernetes ServiceMonitor
+
+If using Prometheus Operator in Kubernetes, create this ServiceMonitor resource:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: vidkeep
+  labels:
+    app: vidkeep
+spec:
+  selector:
+    matchLabels:
+      app: vidkeep
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+```
+
+## A.3 Grafana Dashboard Queries
+
+Example PromQL queries for building Grafana dashboards:
+
+```promql
+# P95 download duration over last hour
+histogram_quantile(0.95, rate(vidkeep_download_duration_seconds_bucket[1h]))
+
+# P95 muxing duration (identifies CPU bottleneck)
+histogram_quantile(0.95, rate(vidkeep_muxing_duration_seconds_bucket[1h]))
+
+# Average memory per worker
+avg(vidkeep_worker_memory_mb) by (worker_id)
+
+# Suggested CPU allocation based on P99
+ceil(histogram_quantile(0.99, rate(vidkeep_worker_cpu_percent[24h])) / 100)
+
+# Download throughput
+rate(vidkeep_downloads_total[5m])
+
+# Average download speed
+histogram_quantile(0.5, rate(vidkeep_download_speed_mbps_bucket[1h]))
+```
+
+## A.4 Alertmanager Rules (Optional)
+
+Example alert rules for worker health:
+
+```yaml
+groups:
+  - name: vidkeep
+    rules:
+      - alert: VidKeepNoActiveWorkers
+        expr: vidkeep_active_workers == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No active VidKeep workers"
+          
+      - alert: VidKeepHighFailureRate
+        expr: rate(vidkeep_downloads_total{status="failed"}[5m]) > 0.1
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High download failure rate"
+```
+
