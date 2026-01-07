@@ -23,9 +23,12 @@ COPY backend/ .
 # Copy frontend build to static directory (T026 Monolith Merge)
 COPY --from=frontend-builder /frontend/dist /app/static
 
+# Make startup script executable
+RUN chmod +x /app/startup.sh
+
 # Expose port
 EXPOSE 8000
 
 # Use tini as init system to prevent zombie processes (T028)
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/app/startup.sh"]
