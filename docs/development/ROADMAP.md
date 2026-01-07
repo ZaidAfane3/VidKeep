@@ -2,7 +2,7 @@
 
 ## 📊 Project Status Overview
 
-**Overall Progress: 30/31 tickets (97%) | Phases 1-6 Complete ✅ | T028 Complete ✅**
+**Overall Progress: 31/32 tickets (97%) | Phases 1-6 Complete ✅ | T026, T028 Complete ✅**
 
 ### Phase Completion Status
 
@@ -14,7 +14,7 @@
 | **Phase 4: Frontend** | 7/7 | ✅ COMPLETE & TESTED | 100% | ✅ |
 | **Phase 5: Polish** | 4/4 | ✅ COMPLETE | 100% | ✅ |
 | **Phase 6: Enhancements & Fixes** | 7/7 | ✅ COMPLETE | 100% | ✅ |
-| **Phase 7: Future** | 1/2 | 🔨 IN PROGRESS | 50% | ✅ |
+| **Phase 7: Future** | 2/3 | 🔨 IN PROGRESS | 67% | ✅ |
 
 ### Key Milestones Achieved
 - ✅ Docker multi-container setup with PostgreSQL, Redis, and FastAPI
@@ -64,18 +64,25 @@ All 29 implementation and bug-fix tickets across 6 phases have been implemented 
   - Retry tracking with max 3 retries
   - Frontend UI updates: `resuming` status, retry badges
 
+- ✅ **Phase 7 T026 Monolith Merge Complete:**
+  - Merged frontend (React/Vite) and backend (FastAPI) into single container
+  - Multi-stage Dockerfile at project root
+  - SPA catch-all route with proper API 404 handling
+  - Deleted `frontend/Dockerfile` and `frontend/nginx.conf`
+  - App served on port 3001
+
 ---
 
 ## Progress Overview
 
-| Total Tickets | 31 |
-| Completed | 30 |
+| Total Tickets | 32 |
+| Completed | 31 |
 | In Progress | 0 |
 | Planned | 1 |
 
 ## Current Focus
 
-**T028 Complete!** 1 future ticket planned for Phase 7 (T027 Flutter Mobile App).
+**T026 & T028 Complete!** 1 future ticket planned for Phase 7 (T027 Flutter Mobile App).
 
 ---
 
@@ -168,6 +175,7 @@ Planned future tickets for extended functionality. **📋 PLANNED**
 
 | Ticket | Title | Type | Status | Priority | Comments |
 |--------|-------|------|--------|----------|----------|
+| [T026](../tickets/T026-monolith-merge-evaluation.md) | Frontend/Backend Monolith Merge | Architecture | **Complete** | Medium | Merged into single container, multi-stage Dockerfile |
 | [T027](../tickets/T027-flutter-mobile-app.md) | VidKeep Flutter Mobile App | Feature | Planned | Medium | Cross-platform mobile app (Android + iOS) |
 | [T028](../tickets/T028-embedded-worker-process-pool.md) | Embedded Worker Process Pool | Architecture | **Complete** | Medium | Replaced ARQ with embedded WorkerManager, Prometheus metrics, resume capability |
 

@@ -3,10 +3,11 @@
 #       For production, use environment variables or Docker secrets.
 
 services:
-  api:
-    build: ./backend
+  # T026: Unified monolith service (frontend + backend + embedded workers)
+  app:
+    build: . # Uses root Dockerfile
     ports:
-      - "8000:8000"
+      - "3001:8000" # Serve on 3001 (same as old frontend)
     volumes:
       - vidkeep_data:/data
     environment:
@@ -29,18 +30,8 @@ services:
       retries: 3
       start_period: 10s
 
-  # Worker service removed - workers now embedded in API pod (T028)
-
-  frontend:
-    build:
-      context: ./frontend
-      args:
-        VITE_API_URL: http://localhost:8000
-    ports:
-      - "3001:80"
-    depends_on:
-      api:
-        condition: service_healthy
+  # NOTE: Frontend service removed - now served by app (T026)
+  # NOTE: Worker service removed - embedded in app (T028)
 
   postgres:
     image: postgres:16-alpine

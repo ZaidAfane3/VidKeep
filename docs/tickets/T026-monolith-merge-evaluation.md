@@ -1,13 +1,14 @@
 # T026: Evaluate Frontend/Backend Monolith Merge
 
-
-**Note:** This ticket is archived and not to be used. The monolith merge was not pursued.
+> [!NOTE]
+> **Status: COMPLETE** ✅ - Merged frontend and backend into single container. All QA tests passed (2026-01-07).
 
 ## 1. Overview
 
-**Ticket Type**: Architecture Evaluation / Discussion  
-**Priority**: To be determined  
-**Effort Estimate**: See analysis below  
+**Ticket Type**: Architecture Refactor  
+**Priority**: Medium  
+**Effort Estimate**: ~9 hours (see Section 6)  
+**Depends On**: ~~T028~~ ✅ (Complete)  
 
 ### Summary
 
@@ -50,13 +51,13 @@ Evaluate the feasibility and effort required to merge the frontend (React/Vite) 
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 Current Docker Containers
+### 2.2 Current Docker Containers (Post-T028)
 
 | Service   | Base Image      | Purpose                             | Replicas |
 |-----------|-----------------|-------------------------------------|----------|
 | frontend  | nginx:alpine    | Serve React SPA, proxy to backend   | 1        |
-| api       | python:3.12-slim| FastAPI REST API + WebSocket        | 1        |
-| worker    | python:3.12-slim| ARQ background job processing       | 2        |
+| api       | python:3.12-slim| FastAPI REST API + WebSocket + **Embedded Workers** | 1 |
+| ~~worker~~| ~~python:3.12-slim~~| ~~ARQ background job processing~~ | ~~2~~ **REMOVED in T028** |
 | postgres  | postgres:16-alpine | Primary database                 | 1        |
 | redis     | redis:7-alpine  | Job queue + pub/sub                 | 1        |
 
@@ -74,29 +75,34 @@ Evaluate the feasibility and effort required to merge the frontend (React/Vite) 
 
 - **Framework**: FastAPI (Python 3.12)
 - **Database**: PostgreSQL with SQLAlchemy (async) + Alembic migrations
-- **Task Queue**: ARQ (Async Redis Queue)
-- **Dependencies**: yt-dlp, FFmpeg, redis, aiofiles
+- **Task Queue**: ~~ARQ~~ **Embedded WorkerManager** (T028) with Redis-based job queue
+- **Dependencies**: yt-dlp, FFmpeg, redis, aiofiles, prometheus-client, psutil
 
-### 2.5 Worker Architecture
+### 2.5 Worker Architecture (Updated by T028)
+
+> [!NOTE]
+> **T028 completed** - Workers are now embedded in the API pod via `WorkerManager`. No separate worker containers needed.
 
 **Key Files**:
-- `backend/app/worker.py` - WorkerSettings, heartbeat loop, pool management
+- `backend/app/services/worker_manager.py` - WorkerManager process pool
+- `backend/app/services/metrics.py` - Prometheus metrics
 - `backend/app/tasks/download.py` - Download task with progress reporting
 
-**Worker Features**:
-1. **Heartbeat Mechanism**: Workers send heartbeats to Redis every 30 seconds
-2. **Progress Reporting**: Sync Redis client publishes progress during downloads
-3. **Cancellation Support**: Checks `cancel:{video_id}` flag in Redis
-4. **Retry Logic**: Up to 3 retries with 60-second delay
-5. **Job Timeout**: 1 hour maximum per download
+**Embedded Worker Features**:
+1. **Embedded Process Pool**: Workers run within API pod, managed by `WorkerManager`
+2. **Heartbeat Mechanism**: Workers send heartbeats to Redis every 30 seconds
+3. **Progress Reporting**: Publishes progress via Redis pub/sub
+4. **Cancellation Support**: Checks `cancel:{video_id}` flag in Redis
+5. **Retry Logic**: Up to 3 retries with stale job recovery
+6. **Prometheus Metrics**: `/metrics` endpoint for monitoring
 
-**How ARQ Works**:
+**How It Works Now**:
 ```python
-# API enqueues job:
-await pool.enqueue_job("download_video", video_id, url)
+# API pushes job to Redis queue:
+await redis.lpush("vidkeep:jobs:pending", video_id)
 
-# Worker picks up job and executes:
-async def download_video(ctx, video_id: str, url: str):
+# WorkerManager claims and executes:
+async def download_video_task(video_id: str, url: str):
     # Download logic with progress reporting
 ```
 
@@ -161,6 +167,7 @@ Replace ARQ with in-process background tasks using `asyncio.create_task()`.
 # backend/app/main.py (additions)
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi import HTTPException
 from pathlib import Path
 
 # Mount static files
@@ -169,13 +176,39 @@ if STATIC_DIR.exists():
     app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
 
 # SPA catch-all route (MUST be last)
+# IMPORTANT: Exclude API, WS, health, and metrics routes to preserve proper 404 handling
 @app.get("/{path:path}")
 async def spa_catch_all(path: str):
+    # Don't catch API/WS/health/metrics routes - let them 404 properly with JSON response
+    if path.startswith(("api/", "ws/", "health", "metrics")):
+        raise HTTPException(status_code=404, detail="Not found")
+    
     static_file = STATIC_DIR / path
     if static_file.exists() and static_file.is_file():
         return FileResponse(static_file)
     return FileResponse(STATIC_DIR / "index.html")
 ```
+
+#### 4.1.2 Security Headers Middleware
+
+> [!TIP]
+> These security headers are typically handled by Ingress NGINX in Kubernetes. If using Ingress NGINX, this middleware is **optional** but provides defense-in-depth.
+
+```python
+# backend/app/main.py (optional security enhancement)
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+```
+
+> [!NOTE]
+> **No code changes required for existing endpoints:**
+> - Health endpoints (`/health`, `/health/ready`, `/health/db`, `/health/redis`) - already exist
+> - Metrics endpoint (`/metrics`) - already added by T028
 
 #### 4.1.2 Unified Dockerfile
 
@@ -231,16 +264,19 @@ const API_BASE = '/api'  // Works with same origin
 
 ### 4.3 Docker Compose Changes
 
+> [!NOTE]
+> **T028 simplification**: The separate `worker` service was already removed by T028. Workers are now embedded in the API pod.
+
 | Change | Description | Effort |
 |--------|-------------|--------|
 | Remove `frontend` service | No longer separate | Low |
 | Update `api` service | New Dockerfile context, expose port 3001 or 80 | Low |
-| Keep `worker` service | Still needed for background jobs | None |
+| ~~Keep `worker` service~~ | ~~Still needed for background jobs~~ | **Already removed by T028** |
 
 ```yaml
-# docker-compose.yml (updated)
+# docker-compose.yml (proposed after T026)
 services:
-  app:  # Renamed from 'api'
+  app:  # Single unified service (combines frontend + api)
     build: .  # Root context for unified Dockerfile
     ports:
       - "3001:8000"  # or "80:8000"
@@ -251,16 +287,15 @@ services:
       REDIS_URL: redis://redis:6379
       DATA_PATH: /data
       MAX_VIDEO_HEIGHT: 1080
+      MAX_WORKERS: 2  # Embedded workers from T028
+      POD_NAME: local-dev
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-
-  worker:
-    build: . 
-    command: arq app.worker.WorkerSettings
-    # ... (unchanged)
+  
+  # NOTE: No separate worker service needed - embedded in app via T028
 ```
 
 ### 4.4 Project Structure Changes
@@ -284,18 +319,22 @@ VidKeep/                         VidKeep/
 
 ## 5. Worker Architecture - What Changes
 
+> [!TIP]
+> **T028 Completed** - Worker architecture has already been simplified. This section now reflects the post-T028 state.
+
 ### What Stays the Same
-- ARQ worker process runs separately (required for long-running downloads)
 - Redis pub/sub for WebSocket progress updates
 - Heartbeat mechanism for worker health
 - Job queue, retries, and cancellation
 
-### What Changes
-- Worker container uses the same unified image (already does today)
-- No architectural changes to worker logic
+### What Was Already Changed by T028
+- ~~ARQ worker process runs separately~~ → **Embedded in API pod**
+- Workers managed by `WorkerManager` within the API process
+- `MAX_WORKERS` env var controls concurrent downloads per pod
+- Prometheus metrics at `/metrics` endpoint
 
 > [!NOTE]
-> The ARQ worker **must remain a separate process**. Video downloads with yt-dlp and FFmpeg can take 30+ minutes and would block the FastAPI event loop if run in-process.
+> With T028 complete, the monolith merge in T026 becomes simpler - there's no separate worker service to consider.
 
 ---
 
@@ -346,6 +385,15 @@ VidKeep/                         VidKeep/
 | **No Nginx Features** | Lose nginx's static file performance, gzip, caching |
 | **Coupled Versioning** | Frontend and backend versions tied together |
 | **Larger Container** | Node.js build deps in multi-stage, but final Python image stays slim |
+
+> [!TIP]
+> **Kubernetes with Ingress NGINX**: If deploying to Kubernetes with Ingress NGINX, many "disadvantages" are mitigated:
+> - **Gzip compression**: Handled by Ingress NGINX
+> - **Static file caching**: Ingress NGINX adds `Cache-Control` headers
+> - **Security headers**: Configurable via Ingress annotations
+> - **API 404 handling**: Still handled at application level (Ingress proxies all traffic through)
+>
+> The merge simplifies the application layer while Ingress NGINX handles edge concerns.
 
 ---
 
