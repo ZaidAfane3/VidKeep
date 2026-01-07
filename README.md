@@ -62,20 +62,85 @@
 
 ## 🚀 Quick Start
 
-### 1. Clone the repository
+### Option 1: Docker Run (Quickest)
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/VidKeep.git
+# Create volumes
+docker volume create vidkeep_data
+docker volume create vidkeep_postgres
+
+# Start PostgreSQL
+docker run -d --name vidkeep-postgres \
+  -e POSTGRES_USER=vidkeep \
+  -e POSTGRES_PASSWORD=vidkeep \
+  -e POSTGRES_DB=vidkeep \
+  -v vidkeep_postgres:/var/lib/postgresql/data \
+  postgres:16-alpine
+
+# Start Redis
+docker run -d --name vidkeep-redis redis:7-alpine
+
+# Start VidKeep
+docker run -d --name vidkeep \
+  -p 3001:8000 \
+  -e DATABASE_URL=postgresql+asyncpg://vidkeep:vidkeep@vidkeep-postgres:5432/vidkeep \
+  -e REDIS_URL=redis://vidkeep-redis:6379 \
+  -v vidkeep_data:/data \
+  --link vidkeep-postgres --link vidkeep-redis \
+  zaidafane3/vidkeep:2.0.0
+```
+
+### Option 2: Docker Compose (Recommended)
+
+Create a `docker-compose.yml`:
+
+```yaml
+services:
+  app:
+    image: zaidafane3/vidkeep:2.0.0
+    ports:
+      - "3001:8000"
+    volumes:
+      - vidkeep_data:/data
+    environment:
+      DATABASE_URL: postgresql+asyncpg://vidkeep:vidkeep@postgres:5432/vidkeep
+      REDIS_URL: redis://redis:6379
+      MAX_WORKERS: 2
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:16-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: vidkeep
+      POSTGRES_PASSWORD: vidkeep
+      POSTGRES_DB: vidkeep
+
+  redis:
+    image: redis:7-alpine
+
+volumes:
+  vidkeep_data:
+  postgres_data:
+```
+
+Then run:
+```bash
+docker compose up -d
+```
+
+### Option 3: Build from Source
+
+```bash
+git clone https://github.com/ZaidAfane3/VidKeep.git
 cd VidKeep
+docker compose up -d --build
 ```
 
-### 2. Start with Docker Compose
-
-```bash
-docker-compose up -d
-```
-
-### 3. Access the application
+### Access the Application
 
 - **Application**: http://localhost:3001
 - **API Docs**: http://localhost:3001/docs
