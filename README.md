@@ -49,7 +49,7 @@
 | **Frontend** | React (Vite) + Tailwind CSS |
 | **Backend** | FastAPI (Python) |
 | **Database** | PostgreSQL |
-| **Task Queue** | ARQ (async Redis-based queue) |
+| **Task Queue** | Embedded Worker Pool (Redis-based) |
 | **Storage** | Local filesystem |
 | **Downloader** | yt-dlp + FFmpeg |
 | **Real-time** | WebSocket + Redis Pub/Sub |
@@ -77,9 +77,9 @@ docker-compose up -d
 
 ### 3. Access the application
 
-- **Frontend**: http://localhost:3001
-- **API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
+- **Application**: http://localhost:3001
+- **API Docs**: http://localhost:3001/docs
+- **Metrics**: http://localhost:3001/metrics
 
 ## ⚙️ Configuration
 
@@ -93,7 +93,7 @@ Create a `.env` file or modify `docker-compose.yml`:
 | `REDIS_URL` | `redis://redis:6379` | Redis connection string |
 | `DATA_PATH` | `/data` | Volume mount path for videos |
 | `MAX_VIDEO_HEIGHT` | `1080` | Maximum video resolution |
-| `WORKER_COUNT` | `2` | Number of download workers |
+| `MAX_WORKERS` | `2` | Number of concurrent download workers |
 
 ### Example `.env` files
 
@@ -103,22 +103,21 @@ See [`backend/.env.example`](backend/.env.example) and [`frontend/.env.example`]
 
 ```
 VidKeep/
+├── Dockerfile              # Unified multi-stage build
+├── docker-compose.yml
 ├── backend/                # FastAPI backend
 │   ├── app/
 │   │   ├── routers/        # API endpoints
-│   │   ├── services/       # Business logic
-│   │   └── tasks/          # Background workers
+│   │   ├── services/       # Business logic (WorkerManager, metrics)
+│   │   └── tasks/          # Download task
 │   ├── alembic/            # Database migrations
-│   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/               # React frontend
-│   ├── src/
-│   │   ├── components/     # UI components
-│   │   ├── hooks/          # Custom React hooks
-│   │   └── api/            # API client
-│   └── Dockerfile
-├── docker-compose.yml
-└── README.md
+│   └── src/
+│       ├── components/     # UI components
+│       ├── hooks/          # Custom React hooks
+│       └── api/            # API client
+└── docs/                   # Documentation & tickets
 ```
 
 ## 🎥 Video Format
@@ -185,7 +184,7 @@ npm run dev
 ### Running database migrations
 
 ```bash
-docker-compose exec api alembic upgrade head
+docker-compose exec app alembic upgrade head
 ```
 
 ## 📜 Data Storage
@@ -213,5 +212,3 @@ This project is for personal archival use only. Please respect YouTube's Terms o
 <p align="center">
   Made with ❤️ for the self-hosted community
 </p>
-</CodeContent>
-<parameter name="EmptyFile">false
