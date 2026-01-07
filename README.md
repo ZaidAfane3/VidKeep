@@ -271,6 +271,21 @@ Videos and thumbnails are stored in a Docker volume:
     └── {video_id}.jpg
 ```
 
+## 🏷️ Versioning
+
+VidKeep uses a custom versioning scheme: `{major}.{minor}.{devops}`
+
+| Segment | When to Bump | Examples |
+|---------|--------------|----------|
+| **Major** | Breaking changes, major rewrites | New architecture, API changes |
+| **Minor** | New features, UI changes, optimizations | New endpoints, UI redesign, performance improvements |
+| **DevOps** | Infrastructure changes | Docker, Kubernetes, CI/CD, startup scripts |
+
+**Examples:**
+- `2.0.0` → Major version with monolith merge
+- `2.1.0` → Added new video filter feature
+- `2.1.1` → Updated Dockerfile with startup script
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
