@@ -18,6 +18,7 @@
   <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white" alt="PostgreSQL">
   <img src="https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/yt--dlp-FF0000?style=flat&logo=youtube&logoColor=white" alt="yt-dlp">
+  <a href="https://deepwiki.com/ZaidAfane3/VidKeep"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
 ---
@@ -87,7 +88,7 @@ docker run -d --name vidkeep \
   -e REDIS_URL=redis://vidkeep-redis:6379 \
   -v vidkeep_data:/data \
   --link vidkeep-postgres --link vidkeep-redis \
-  zaidafane3/vidkeep:2.0.0
+  zaidafane3/vidkeep:latest
 ```
 
 ### Option 2: Docker Compose (Recommended)
@@ -97,7 +98,7 @@ Create a `docker-compose.yml`:
 ```yaml
 services:
   app:
-    image: zaidafane3/vidkeep:2.0.0
+    image: zaidafane3/vidkeep:latest
     ports:
       - "3001:8000"
     volumes:
