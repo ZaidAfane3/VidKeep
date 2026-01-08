@@ -18,6 +18,9 @@ Develop a cross-platform mobile application for VidKeep using Flutter, enabling 
 > [!NOTE]
 > The existing backend requires **zero modifications** to support the mobile app. All endpoints are REST-based with JSON responses and fully compatible with Flutter HTTP clients.
 
+> [!IMPORTANT]
+> **Architecture Update (T026 + T028)**: The backend now runs as a **monolith** (frontend + API in single container on port 3001) with **embedded workers** (no separate ARQ containers). This simplifies deployment and adds new features like download resume and retry tracking.
+
 ### 2.1 API Endpoints Available
 
 | Endpoint | Method | Description | Mobile Use Case |
@@ -40,7 +43,14 @@ Develop a cross-platform mobile application for VidKeep using Flutter, enabling 
 ```dart
 // Dart equivalent of TypeScript types from frontend/src/api/types.ts
 
-enum VideoStatus { pending, downloading, complete, failed, cancelled }
+enum VideoStatus { 
+  queued,       // Waiting in queue
+  downloading,  // Currently downloading
+  resuming,     // NEW (T028): Resuming from partial file after crash recovery
+  complete,     // Download finished
+  failed,       // Download failed after max retries
+  cancelled     // User cancelled
+}
 
 class Video {
   final String videoId;
@@ -57,6 +67,8 @@ class Video {
   final String? errorMessage;
   final String youtubeUrl;
   final int? downloadProgress;
+  final int retryCount;       // NEW (T028): Number of retry attempts (0-3)
+  final int? resumedBytes;    // NEW (T028): Bytes already downloaded when resuming
 }
 
 class Channel {
@@ -68,6 +80,8 @@ class QueueStatus {
   final int pending;
   final int processing;
   final int total;
+  final int maxWorkers;       // NEW (T028): Maximum concurrent downloads
+  final int activeWorkers;    // NEW (T028): Currently active downloads
 }
 ```
 
@@ -114,7 +128,6 @@ This is **fully compatible** with Flutter video players (video_player, chewie, b
 | **Video Details** | P1 | Full metadata view with description |
 | **Delete Video** | P1 | Remove video from library |
 | **Cancel Download** | P1 | Cancel pending/downloading videos |
-| **Dark/Light Theme** | P1 | Support system theme preference |
 
 ### 3.2 Advanced Features (Post-MVP)
 
@@ -391,6 +404,12 @@ class VidKeepApiClient {
     await _dio.post('/api/videos/$videoId/cancel');
   }
 
+  // GET /api/queue/status (NEW - T028)
+  Future<QueueStatus> getQueueStatus() async {
+    final response = await _dio.get('/api/queue/status');
+    return QueueStatus.fromJson(response.data);
+  }
+
   // Helper: Get stream URL (not a fetch, just URL construction)
   String getStreamUrl(String videoId) => '${_dio.options.baseUrl}/api/stream/$videoId';
   
@@ -522,8 +541,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
       allowMuting: true,
       showControls: true,
       materialProgressColors: ChewieProgressColors(
-        playedColor: const Color(0xFF00FF66),  // VidKeep green
-        handleColor: const Color(0xFF00FF66),
+        playedColor: const Color(0xFF00FF41),  // Neon green
+        handleColor: const Color(0xFF00FF41),
         backgroundColor: Colors.grey,
         bufferedColor: Colors.grey[700]!,
       ),
@@ -551,7 +570,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         child: _chewieController != null &&
                 _chewieController!.videoPlayerController.value.isInitialized
             ? Chewie(controller: _chewieController!)
-            : const CircularProgressIndicator(color: Color(0xFF00FF66)),
+            : const CircularProgressIndicator(color: Color(0xFF00FF41)),
       ),
     );
   }
@@ -566,51 +585,92 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // VidKeep color palette (matching web app)
-  static const Color phosphorGreen = Color(0xFF00FF66);
-  static const Color terminalBg = Color(0xFF0D0D1A);
-  static const Color cardBg = Color(0xFF1A1A2E);
-  static const Color textPrimary = Color(0xFFE0E0E0);
-  static const Color textSecondary = Color(0xFF8A8A8A);
+  // VidKeep Retro Terminal color palette
+  static const Color neonGreen = Color(0xFF00FF41);      // Primary accent
+  static const Color darkGreen = Color(0xFF003B00);       // Accent dark
+  static const Color terminalBg = Color(0xFF050505);      // Pure black background
+  static const Color cardBg = Color(0xFF0A0A0A);          // Card background
+  static const Color textPrimary = Color(0xFFFFFFFF);     // White text
+  static const Color textSecondary = Color(0xFF666666);   // Muted text
+  static const Color borderColor = Color(0xFF00FF41);     // Green borders
 
   static ThemeData get darkTheme => ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
         scaffoldBackgroundColor: terminalBg,
         colorScheme: ColorScheme.dark(
-          primary: phosphorGreen,
-          secondary: phosphorGreen,
+          primary: neonGreen,
+          secondary: neonGreen,
           surface: cardBg,
           background: terminalBg,
         ),
-        textTheme: GoogleFonts.vt323TextTheme(
+        // Share Tech Mono font for terminal aesthetic
+        textTheme: GoogleFonts.shareRegularTextTheme(
           ThemeData.dark().textTheme,
         ).copyWith(
-          headlineLarge: GoogleFonts.vt323(
-            color: phosphorGreen,
-            fontSize: 32,
+          headlineLarge: GoogleFonts.shareTechMono(
+            color: neonGreen,
+            fontSize: 28,
+            letterSpacing: 1.0,
           ),
-          bodyLarge: GoogleFonts.vt323(
+          titleLarge: GoogleFonts.shareTechMono(
             color: textPrimary,
             fontSize: 18,
+          ),
+          bodyLarge: GoogleFonts.shareTechMono(
+            color: textPrimary,
+            fontSize: 14,
+          ),
+          bodySmall: GoogleFonts.shareTechMono(
+            color: textSecondary,
+            fontSize: 12,
           ),
         ),
         appBarTheme: AppBarTheme(
           backgroundColor: terminalBg,
-          titleTextStyle: GoogleFonts.vt323(
-            color: phosphorGreen,
-            fontSize: 24,
+          elevation: 0,
+          titleTextStyle: GoogleFonts.shareTechMono(
+            color: neonGreen,
+            fontSize: 20,
+            letterSpacing: 1.0,
           ),
         ),
-        cardTheme: const CardTheme(
+        cardTheme: CardTheme(
           color: cardBg,
           elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.zero, // Sharp corners
+            side: BorderSide(color: borderColor, width: 1),
+          ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: phosphorGreen,
-            foregroundColor: terminalBg,
+            backgroundColor: Colors.transparent,
+            foregroundColor: neonGreen,
+            side: BorderSide(color: neonGreen, width: 1),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.zero, // Sharp corners
+            ),
           ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: cardBg,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.zero,
+            borderSide: BorderSide(color: darkGreen),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.zero,
+            borderSide: BorderSide(color: neonGreen),
+          ),
+          labelStyle: GoogleFonts.shareTechMono(color: textSecondary),
+          hintStyle: GoogleFonts.shareTechMono(color: textSecondary),
+        ),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: terminalBg,
+          selectedItemColor: neonGreen,
+          unselectedItemColor: textSecondary,
         ),
       );
 }
@@ -731,7 +791,7 @@ class ServerConfigScreen extends StatefulWidget {
             TextField(
               decoration: const InputDecoration(
                 labelText: 'Server URL',
-                hintText: 'http://192.168.1.100:8000',
+                hintText: 'http://192.168.1.100:3001',
               ),
               onChanged: (value) => // Save to SharedPreferences
             ),
@@ -749,12 +809,14 @@ class ServerConfigScreen extends StatefulWidget {
 
 ### 8.2 Backend API URL Options
 
-| Environment | URL Pattern |
-|-------------|-------------|
-| Local LAN (Docker) | `http://192.168.x.x:3001` |
-| Local LAN (API Direct) | `http://192.168.x.x:8000` |
-| Tailscale/WireGuard | `http://vidkeep.ts.net:3001` |
-| Reverse Proxy (HTTPS) | `https://vidkeep.yourdomain.com` |
+> [!NOTE]
+> **Post-T026**: The application is now a monolith serving both frontend and API on a single port.
+
+| Environment | URL Pattern | Notes |
+|-------------|-------------|-------|
+| Local LAN (Docker) | `http://192.168.x.x:3001` | Default monolith port |
+| Tailscale/WireGuard | `http://vidkeep.ts.net:3001` | VPN access |
+| Reverse Proxy (HTTPS) | `https://vidkeep.yourdomain.com` | Production recommended |
 
 ---
 
@@ -764,7 +826,7 @@ class ServerConfigScreen extends StatefulWidget {
 
 | Requirement | Implementation |
 |-------------|----------------|
-| Min SDK | 21 (Android 5.0) |
+| Min SDK | 24 (Android 7.0) |
 | Target SDK | 34 (Android 14) |
 | Permissions | `INTERNET`, `WRITE_EXTERNAL_STORAGE` (for offline) |
 | Background | WorkManager for background downloads |
@@ -780,7 +842,7 @@ class ServerConfigScreen extends StatefulWidget {
 
 | Requirement | Implementation |
 |-------------|----------------|
-| Min iOS | 12.0 |
+| Min iOS | 15.0 |
 | Permissions | NSAppTransportSecurity for HTTP (dev) |
 | Background | Background fetch for download status |
 
@@ -989,13 +1051,15 @@ gantt
 
 | # | Decision | Notes | Status |
 |---|----------|-------|--------|
-| 5 | **Theme** | VT323 font throughout, phosphor green accents | ✅ **Confirmed** |
-| 6 | **Navigation Icons** | ASCII-style (`>_`, `/ch`, `↓↓`, `./`) vs standard icons | ✅ **ASCII-style** |
-| 7 | **Scrollbars** | Hidden (cleaner) vs visible | ✅ **Hidden** |
-| 8 | **Pull-to-Refresh** | Include in MVP? | TBD |
-| 9 | **Haptic Feedback** | On favorite toggle, download complete, etc. | TBD |
-| 10 | **Empty States Design** | What to show for no videos, no favorites, offline mode | TBD |
-| 11 | **Error UI Patterns** | Toast vs inline errors vs modal | TBD |
+| 5 | **Theme** | Share Tech Mono font, #00ff41 neon green accents | ✅ **Confirmed** |
+| 6 | **Navigation Icons** | SVG icons (monochrome) | ✅ **SVG Icons** |
+| 7 | **Scrollbars** | Hidden (cleaner) | ✅ **Hidden** |
+| 8 | **Pull-to-Refresh** | Include in MVP | ✅ **Yes** |
+| 9 | **Authentication** | No auth for now | ✅ **No Auth** |
+| 10 | **State Management** | Riverpod 2.0 | ✅ **Confirmed** |
+| 11 | **Video Player** | video_player + chewie | ✅ **Confirmed** |
+| 12 | **Bundle ID** | `com.vidkeep.mobile` (iOS/Android) | ✅ **Confirmed** |
+| 13 | **Server URL Config** | Manual input, saved to SharedPreferences | ✅ **Confirmed** |
 
 ### 15.3 Performance Requirements
 
@@ -1042,7 +1106,7 @@ The following sections should be added to this ticket once the above decisions a
 
 > [!NOTE]
 > **Preview Available**: A mobile theme preview is available at `docs/mobile-theme-preview/index.html`
-> showing the VT323 retro terminal theme with ASCII navigation icons.
+> showing the Retro Terminal design with Share Tech Mono font, #00ff41 neon green accent, CRT scanlines, and SVG navigation icons.
 
 ## 16. References
 
