@@ -195,10 +195,37 @@ This is **fully compatible** with Flutter video players (video_player, chewie, b
 | Provider | Simple, well documented | Limited async handling |
 | GetX | Easy to use | Less testable, implicit dependencies |
 
-### 4.3 Project Structure
+### 4.3 Repository Structure
+
+The Flutter mobile app lives in a `mobile/` folder alongside the existing backend and frontend:
 
 ```
-vidkeep_mobile/
+ViKeep/
+├── api/                    # FastAPI backend (existing)
+│   ├── main.py
+│   ├── routers/
+│   └── services/
+│
+├── frontend/               # React web app (existing)
+│   ├── src/
+│   └── package.json
+│
+├── mobile/                 # 🆕 Flutter mobile app
+│   ├── lib/
+│   ├── android/
+│   ├── ios/
+│   ├── test/
+│   └── pubspec.yaml
+│
+├── docs/                   # Documentation (existing)
+├── docker-compose.yml      # Backend only (mobile runs locally)
+└── README.md
+```
+
+### 4.4 Mobile App Project Structure
+
+```
+mobile/
 ├── android/                      # Android native code
 ├── ios/                          # iOS native code
 ├── lib/
