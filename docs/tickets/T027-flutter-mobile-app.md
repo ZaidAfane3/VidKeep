@@ -1156,6 +1156,15 @@ The following sections should be added to this ticket once the above decisions a
 | 2026-01-09 | Phase 2 | Repositories | `video_repository.dart`, `channel_repository.dart` |
 | 2026-01-09 | Phase 2 | Providers | `providers.dart` - Riverpod providers for API, WS, repos |
 | 2026-01-09 | Phase 2 | Build verified | `flutter analyze`: 0 issues, `flutter test`: 1/1 passed |
+| 2026-01-09 | Phase 2 | **COMPLETE** | Committed: "Phase 2 Done" (b4f0155) ✅ |
+| 2026-01-09 | Phase 3 | Settings | `settings_screen.dart` - Server URL config with test connection |
+| 2026-01-09 | Phase 3 | Providers | `video_providers.dart` - State management for videos, channels |
+| 2026-01-09 | Phase 3 | Widgets | `video_card.dart` - Card with status overlay, progress bar |
+| 2026-01-09 | Phase 3 | Widgets | `video_grid.dart` - Masonry grid with pull-to-refresh |
+| 2026-01-09 | Phase 3 | Home | Updated `home_screen.dart` - Tab navigation, ingest dialog |
+| 2026-01-09 | Phase 3 | Build verified | `flutter analyze`: 0 issues, `flutter test`: 1/1 passed |
+| 2026-01-09 | Phase 3 | Bug fix | Fixed settings screen nav issue (embedded mode, no Navigator.pop) |
+| 2026-01-09 | Phase 3 | **COMPLETE** | Manual testing passed - server config, video grid, ingest ✅ |
 
 ---
 
