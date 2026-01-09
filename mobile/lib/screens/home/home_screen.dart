@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/colors.dart';
 import '../../core/config/app_config.dart';
+import '../../widgets/scanlines_overlay.dart';
+import '../../widgets/blinking_cursor.dart';
 
 /// Home screen with video grid and navigation
 class HomeScreen extends StatefulWidget {
@@ -18,25 +20,70 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          '>_${AppConfig.appName.toUpperCase()}',
-          style: GoogleFonts.shareTechMono(
-            color: AppColors.neonGreen,
-            fontSize: 20,
-            letterSpacing: 1.0,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const BlinkingCursor(),
+            const SizedBox(width: 4),
+            Text(
+              AppConfig.appName.toUpperCase(),
+              style: GoogleFonts.shareTechMono(
+                color: AppColors.neonGreen,
+                fontSize: 20,
+                letterSpacing: 1.0,
+              ),
+            ),
+          ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: AppColors.neonGreen),
-            onPressed: () {
-              // TODO: Open ingest modal
-            },
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: _buildAddButton(),
           ),
         ],
       ),
-      body: _buildBody(),
+      body: Stack(
+        children: [
+          _buildBody(),
+          // CRT Scanlines overlay
+          const Positioned.fill(
+            child: IgnorePointer(
+              child: ScanlinesOverlay(),
+            ),
+          ),
+        ],
+      ),
       bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildAddButton() {
+    return GestureDetector(
+      onTap: () {
+        // TODO: Open ingest modal
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          border: Border.all(color: AppColors.neonGreen, width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.add, color: AppColors.neonGreen, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              'ADD VIDEO',
+              style: GoogleFonts.shareTechMono(
+                color: AppColors.neonGreen,
+                fontSize: 12,
+                letterSpacing: 1.0,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -88,7 +135,9 @@ class _HomeScreenState extends State<HomeScreen> {
           top: BorderSide(color: AppColors.borderColor, width: 1),
         ),
       ),
-      child: BottomNavigationBar(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
         items: const [
@@ -113,6 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'SETTINGS',
           ),
         ],
+        ),
       ),
     );
   }
