@@ -6,6 +6,7 @@ import '../../core/theme/colors.dart';
 import '../../providers/video_providers.dart';
 import '../../providers/providers.dart';
 import 'video_card.dart';
+import '../screens/player/video_player_screen.dart';
 
 /// Video grid widget with pull-to-refresh
 class VideoGrid extends ConsumerStatefulWidget {
@@ -188,7 +189,13 @@ class _VideoGridState extends ConsumerState<VideoGrid> {
             video: video,
             thumbnailUrl: videoRepo?.getThumbnailUrl(video.videoId),
             onTap: () {
-              // TODO: Open video player or details
+              if (video.isPlayable) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => VideoPlayerScreen(video: video),
+                  ),
+                );
+              }
             },
             onFavorite: () {
               ref.read(videosProvider.notifier).toggleFavorite(video);

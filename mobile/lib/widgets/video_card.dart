@@ -205,33 +205,38 @@ class VideoCard extends StatelessWidget {
   }
 
   Widget _buildInfo() {
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            video.title,
-            style: GoogleFonts.shareTechMono(
-              color: AppColors.textPrimary,
-              fontSize: 12,
-              height: 1.2,
+    return SizedBox(
+      height: 60, // Fixed height for consistent cards
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                video.title,
+                style: GoogleFonts.shareTechMono(
+                  color: AppColors.textPrimary,
+                  fontSize: 12,
+                  height: 1.2,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            video.channelName.toUpperCase(),
-            style: GoogleFonts.shareTechMono(
-              color: AppColors.neonGreen,
-              fontSize: 10,
+            Text(
+              video.channelName.toUpperCase(),
+              style: GoogleFonts.shareTechMono(
+                color: AppColors.neonGreen,
+                fontSize: 10,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
+

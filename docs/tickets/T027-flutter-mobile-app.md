@@ -137,6 +137,7 @@ This is **fully compatible** with Flutter video players (video_player, chewie, b
 | **Background Download** | P2 | Continue downloads while app is backgrounded |
 | **Push Notifications** | P2 | Notify when server-side download completes |
 | **Share Integration** | P2 | Share from YouTube app to VidKeep |
+| **Landscape Auto-Rotate** | P2 | Auto-rotate to landscape when fullscreen video |
 | **Picture-in-Picture** | P2 | PiP support on Android/iOS |
 | **Chromecast/AirPlay** | P3 | Cast to TV |
 | **Biometric Lock** | P3 | Optional app lock |
@@ -1164,7 +1165,12 @@ The following sections should be added to this ticket once the above decisions a
 | 2026-01-09 | Phase 3 | Home | Updated `home_screen.dart` - Tab navigation, ingest dialog |
 | 2026-01-09 | Phase 3 | Build verified | `flutter analyze`: 0 issues, `flutter test`: 1/1 passed |
 | 2026-01-09 | Phase 3 | Bug fix | Fixed settings screen nav issue (embedded mode, no Navigator.pop) |
-| 2026-01-09 | Phase 3 | **COMPLETE** | Manual testing passed - server config, video grid, ingest ✅ |
+| 2026-01-09 | Phase 3 | **COMPLETE** | Committed: "Phase 3 Done" (39515e9) ✅ |
+| 2026-01-09 | Phase 4 | Player | `video_player_screen.dart` - Chewie player with controls |
+| 2026-01-09 | Phase 4 | Navigation | Video card tap opens player (for playable videos) |
+| 2026-01-09 | Phase 4 | Build verified | `flutter analyze`: 0 issues, `flutter test`: 1/1 passed |
+| 2026-01-09 | Phase 4 | Bug fix | Fixed card sizing - constrained info section to 60px height |
+| 2026-01-09 | Phase 4 | **COMPLETE** | Manual testing passed - video player with chewie ✅ |
 
 ---
 
