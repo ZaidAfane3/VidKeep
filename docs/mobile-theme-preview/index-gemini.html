@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VidKeep Mobile Preview</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        :root {
+            --neon-green: #00ff41;
+            --dark-green: #003b00;
+            --bg-color: #050505;
+            --card-bg: #0a0a0a;
+            --border-color: #00ff41;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        /* --- Device Frame --- */
+        .device-frame {
+            width: 375px;
+            height: 812px;
+            background-color: var(--bg-color);
+            border: 1px solid #333;
+            border-radius: 40px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.7);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            color: var(--neon-green);
+        }
+
+        /* Scanline effect */
+        .device-frame::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 100;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        /* --- Header --- */
+        header {
+            padding: 20px 15px 10px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-color);
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 1.2rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px var(--neon-green);
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            background: transparent;
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            padding: 4px 8px;
+            font-family: inherit;
+            font-size: 0.7rem;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        
+        .btn-small:active {
+            background: var(--neon-green);
+            color: black;
+        }
+
+        /* --- Main Content --- */
+        main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            padding-bottom: 80px; /* Space for navbar */
+        }
+
+        /* Hide scrollbar */
+        main::-webkit-scrollbar {
+            width: 0px; 
+            background: transparent; 
+        }
+
+        .video-card {
+            border: 1px solid var(--border-color);
+            margin-bottom: 15px;
+            padding: 10px;
+            background: var(--card-bg);
+            position: relative;
+            transition: transform 0.1s;
+        }
+
+        .video-card:active {
+            transform: scale(0.98);
+        }
+
+        .thumbnail-area {
+            height: 140px;
+            background: 
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 1px,
+                    #002200 1px,
+                    #002200 2px
+                ),
+                linear-gradient(to bottom, #001100, #000);
+            border: 1px solid var(--dark-green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        .thumbnail-text {
+            opacity: 0.5;
+            font-size: 0.8rem;
+        }
+
+        .duration {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: black;
+            border: 1px solid var(--neon-green);
+            padding: 2px 4px;
+            font-size: 0.7rem;
+        }
+
+        .card-info h3 {
+            margin: 0 0 5px 0;
+            font-size: 0.9rem;
+            line-height: 1.2;
+            color: white;
+        }
+
+        .card-meta {
+            font-size: 0.7rem;
+            color: var(--neon-green);
+            opacity: 0.8;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* --- Bottom Nav --- */
+        nav {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 60px;
+            background: var(--bg-color);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 20;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--neon-green);
+            opacity: 0.6;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .nav-item.active {
+            opacity: 1;
+            background: rgba(0, 255, 65, 0.1);
+            box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.2);
+        }
+
+        .nav-item svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        .add-btn-nav {
+            transform: translateY(-20px);
+            background: black;
+            border: 1px solid var(--neon-green);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+        
+        .add-btn-nav svg {
+            width: 30px;
+            height: 30px;
+        }
+
+        /* --- Footer Status --- */
+        .status-bar {
+            position: absolute;
+            bottom: 60px;
+            width: 100%;
+            padding: 2px 10px;
+            font-size: 0.6rem;
+            border-top: 1px solid var(--dark-green);
+            background: black;
+            display: flex;
+            justify-content: space-between;
+            opacity: 0.7;
+        }
+
+        /* --- Modal --- */
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            width: 90%;
+            background: black;
+            border: 1px solid var(--neon-green);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        }
+
+        .modal-header {
+            background: var(--neon-green);
+            color: black;
+            padding: 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-btn {
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .terminal-input {
+            width: 100%;
+            background: #0a0a0a;
+            border: 1px solid var(--dark-green);
+            color: var(--neon-green);
+            padding: 10px;
+            font-family: inherit;
+            margin-bottom: 10px;
+        }
+        
+        .terminal-input:focus {
+            outline: none;
+            border-color: var(--neon-green);
+        }
+
+        .modal-footer {
+            padding: 0 20px 20px;
+        }
+
+        .btn-block {
+            width: 100%;
+            background: transparent;
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            padding: 10px;
+            font-family: inherit;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .btn-block:hover {
+            background: var(--neon-green);
+            color: black;
+        }
+        
+        /* Utility */
+        .blink {
+            animation: blinker 1.5s linear infinite;
+        }
+        
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="device-frame">
+        <header>
+            <div class="logo">>_VIDKEEP</div>
+            <div class="header-controls">
+                <button class="btn-small" onclick="openModal()">+ ADD</button>
+                <div style="font-size:1.2rem;">≡</div>
+            </div>
+        </header>
+
+        <main id="videoList">
+            <div class="video-card">
+                <div class="thumbnail-area">
+                    <span class="thumbnail-text">No Thumbnail</span>
+                    <div class="duration">3:54</div>
+                </div>
+                <div class="card-info">
+                    <h3>What happens to your body when you exercise at 6 AM for 30 days</h3>
+                    <div class="card-meta">
+                        <span>YELLOW DUDE | GRAVGEAR</span>
+                        <span>:</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="video-card">
+                <div class="thumbnail-area">
+                    <span class="thumbnail-text">No Thumbnail</span>
+                    <div class="duration">12:20</div>
+                </div>
+                <div class="card-info">
+                    <h3>Setting up a Homelab with Kubernetes k3s</h3>
+                    <div class="card-meta">
+                        <span>TECHNO TIM</span>
+                        <span>:</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="video-card">
+                <div class="thumbnail-area">
+                    <span class="thumbnail-text">No Thumbnail</span>
+                    <div class="duration">8:45</div>
+                </div>
+                <div class="card-info">
+                    <h3>Retro UI Design Systems in 2025</h3>
+                    <div class="card-meta">
+                        <span>DESIGN COURSE</span>
+                        <span>:</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="video-card">
+                <div class="thumbnail-area">
+                    <span class="thumbnail-text">No Thumbnail</span>
+                    <div class="duration">15:30</div>
+                </div>
+                <div class="card-info">
+                    <h3>Why I switched to Dvorak layout</h3>
+                    <div class="card-meta">
+                        <span>KEYBOARD CULT</span>
+                        <span>:</span>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <div class="status-bar">
+            <span>VIDKEEP V1.6.0</span>
+            <span class="blink">LIVE (/TERMINAL)</span>
+            <span>0 WORKERS</span>
+        </div>
+
+        <nav>
+            <div class="nav-item active">
+                <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            </div>
+            <div class="nav-item">
+                <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            </div>
+            <div class="nav-item add-btn-nav" onclick="openModal()">
+                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            </div>
+            <div class="nav-item">
+                <svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+            </div>
+        </nav>
+
+        <div class="modal-overlay" id="addModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <span>ADD VIDEO</span>
+                    <span class="close-btn" onclick="closeModal()">X</span>
+                </div>
+                <div class="modal-body">
+                    <input type="text" class="terminal-input" placeholder="PASTE YOUTUBE URL..." id="videoInput">
+                    <div style="font-size: 0.6rem; color: var(--neon-green); opacity: 0.7;">
+                        SUPPORTED: YOUTUBE.COM/WATCH, YOUTU.BE, YOUTUBE SHORTS
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-block" onclick="addVideoAction()">+ ADD VIDEO</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const modal = document.getElementById('addModal');
+        const input = document.getElementById('videoInput');
+        const list = document.getElementById('videoList');
+
+        function openModal() {
+            modal.classList.add('open');
+            input.focus();
+        }
+
+        function closeModal() {
+            modal.classList.remove('open');
+            input.value = '';
+        }
+
+        function addVideoAction() {
+            const val = input.value;
+            if(!val) {
+                input.style.borderColor = 'red';
+                setTimeout(() => input.style.borderColor = '#003b00', 500);
+                return;
+            }
+
+            // Simulate adding logic
+            const newCard = document.createElement('div');
+            newCard.className = 'video-card';
+            newCard.style.animation = 'blinker 0.5s ease'; 
+            newCard.innerHTML = `
+                <div class="thumbnail-area">
+                    <span class="thumbnail-text">New Video</span>
+                    <div class="duration">0:00</div>
+                </div>
+                <div class="card-info">
+                    <h3>${val}</h3>
+                    <div class="card-meta">
+                        <span>UNKNOWN USER</span>
+                        <span>:</span>
+                    </div>
+                </div>
+            `;
+            
+            // Insert after the first one (simulation)
+            list.insertBefore(newCard, list.children[0]);
+            
+            closeModal();
+        }
+
+        // Close modal on click outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

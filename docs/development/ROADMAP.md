@@ -2,7 +2,7 @@
 
 ## 📊 Project Status Overview
 
-**Overall Progress: 31/32 tickets (97%) | Phases 1-6 Complete ✅ | T026, T028 Complete ✅**
+**Overall Progress: 32/33 tickets (97%) | Phases 1-6 Complete ✅ | T026, T027, T028 Complete ✅**
 
 ### Phase Completion Status
 
@@ -14,7 +14,7 @@
 | **Phase 4: Frontend** | 7/7 | ✅ COMPLETE & TESTED | 100% | ✅ |
 | **Phase 5: Polish** | 4/4 | ✅ COMPLETE | 100% | ✅ |
 | **Phase 6: Enhancements & Fixes** | 7/7 | ✅ COMPLETE | 100% | ✅ |
-| **Phase 7: Future** | 2/3 | 🔨 IN PROGRESS | 67% | ✅ |
+| **Phase 7: Future** | 4/5 | 🔨 IN PROGRESS | 80% | ✅ |
 
 ### Key Milestones Achieved
 - ✅ Docker multi-container setup with PostgreSQL, Redis, and FastAPI
@@ -75,14 +75,14 @@ All 29 implementation and bug-fix tickets across 6 phases have been implemented 
 
 ## Progress Overview
 
-| Total Tickets | 32 |
-| Completed | 31 |
+| Total Tickets | 33 |
+| Completed | 32 |
 | In Progress | 0 |
 | Planned | 1 |
 
 ## Current Focus
 
-**T026 & T028 Complete!** 1 future ticket planned for Phase 7 (T027 Flutter Mobile App).
+**T027 Flutter Mobile App Complete!** 🎉 44 tests passing. Next: T029 Offline Playback (planned).
 
 ---
 
@@ -176,8 +176,10 @@ Planned future tickets for extended functionality. **📋 PLANNED**
 | Ticket | Title | Type | Status | Priority | Comments |
 |--------|-------|------|--------|----------|----------|
 | [T026](../tickets/T026-monolith-merge-evaluation.md) | Frontend/Backend Monolith Merge | Architecture | **Complete** | Medium | Merged into single container, multi-stage Dockerfile |
-| [T027](../tickets/T027-flutter-mobile-app.md) | VidKeep Flutter Mobile App | Feature | Planned | Medium | Cross-platform mobile app (Android + iOS) |
+| [T027](../tickets/T027-flutter-mobile-app.md) | VidKeep Flutter Mobile App | Feature | **Complete** | Medium | Phases 1-8 Complete (Setup→Testing), 44 tests passing |
 | [T028](../tickets/T028-embedded-worker-process-pool.md) | Embedded Worker Process Pool | Architecture | **Complete** | Medium | Replaced ARQ with embedded WorkerManager, Prometheus metrics, resume capability |
+| [BUG-005](../tickets/BUG-005-favorite-icon-not-updating.md) | Mobile: Favorite Icon Not Updating | Bug | **Complete** | Medium | Fixed state watching in VideoDetailScreen and VideoCard |
+| [T029](../tickets/T029-offline-playback.md) | Mobile Offline Playback | Feature | **Planned** | Medium | Download videos for offline viewing, background downloads, storage management |
 
 ---
 

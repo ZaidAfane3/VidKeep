@@ -143,9 +143,15 @@ docker compose up -d --build
 
 ### Access the Application
 
-- **Application**: http://localhost:3001
-- **API Docs**: http://localhost:3001/docs
-- **Metrics**: http://localhost:3001/metrics
+| Endpoint | URL |
+|----------|-----|
+| **Application** | http://localhost:3001 |
+| **API Docs (Swagger)** | http://localhost:3001/docs |
+| **API Docs (ReDoc)** | http://localhost:3001/redoc |
+| **OpenAPI JSON** | http://localhost:3001/openapi.json |
+| **Health Check** | http://localhost:3001/health |
+| **Readiness Check** | http://localhost:3001/health/ready |
+| **Prometheus Metrics** | http://localhost:3001/metrics |
 
 ## ⚙️ Configuration
 
@@ -264,6 +270,21 @@ Videos and thumbnails are stored in a Docker volume:
 └── thumbnails/
     └── {video_id}.jpg
 ```
+
+## 🏷️ Versioning
+
+VidKeep uses a custom versioning scheme: `{major}.{minor}.{devops}`
+
+| Segment | When to Bump | Examples |
+|---------|--------------|----------|
+| **Major** | Breaking changes, major rewrites | New architecture, API changes |
+| **Minor** | New features, UI changes, optimizations | New endpoints, UI redesign, performance improvements |
+| **DevOps** | Infrastructure changes | Docker, Kubernetes, CI/CD, startup scripts |
+
+**Examples:**
+- `2.0.0` → Major version with monolith merge
+- `2.1.0` → Added new video filter feature
+- `2.1.1` → Updated Dockerfile with startup script
 
 ## 🤝 Contributing
 

@@ -50,7 +50,7 @@ frontend/build/
 .docker/
 
 # Data (local development)
-data/
+/data/
 *.mp4
 *.webm
 *.mkv
