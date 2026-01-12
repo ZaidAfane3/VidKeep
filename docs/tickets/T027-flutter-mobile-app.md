@@ -1196,6 +1196,9 @@ The following sections should be added to this ticket once the above decisions a
 | 2026-01-12 | Phase 7 | Unit tests | video_model_test.dart (5 tests), formatters_test.dart (17 tests) |
 | 2026-01-12 | Phase 7 | Widget tests | video_card_test.dart (6 tests) |
 | 2026-01-12 | Phase 7 | **COMPLETE** | All 29 tests passed ✅ |
+| 2026-01-12 | Phase 8 | Serialization tests | video_serialization_test.dart (7 tests) |
+| 2026-01-12 | Phase 8 | Integration test | integration_test/app_test.dart (favorite flow, navigation) |
+| 2026-01-12 | Phase 8 | **COMPLETE** | All 44 tests passed ✅ |
 
 ---
 
