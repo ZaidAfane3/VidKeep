@@ -8,7 +8,6 @@ import '../../core/theme/colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/video.dart';
 import '../../providers/providers.dart';
-import '../../providers/video_providers.dart';
 
 /// Full-screen video player using chewie
 class VideoPlayerScreen extends ConsumerStatefulWidget {
@@ -130,17 +129,6 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              widget.video.isFavorite ? Icons.favorite : Icons.favorite_outline,
-              color: AppColors.neonGreen,
-            ),
-            onPressed: () {
-              ref.read(videosProvider.notifier).toggleFavorite(widget.video);
-            },
-          ),
-        ],
       ),
       body: Column(
         children: [

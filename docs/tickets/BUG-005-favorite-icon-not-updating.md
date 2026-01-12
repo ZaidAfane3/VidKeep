@@ -92,7 +92,23 @@ Widget build(BuildContext context, WidgetRef ref) {
 
 ## 7. Acceptance Criteria
 
-- [ ] Favorite icon updates immediately when toggled in detail screen
-- [ ] Button label updates from "FAVORITE" to "UNFAV" and vice versa
-- [ ] Favorite indicator in title section updates
-- [ ] No regression in grid view favorite toggle
+- [x] Favorite icon updates immediately when toggled in detail screen
+- [x] Button label updates from "FAVORITE" to "UNFAV" and vice versa
+- [x] Favorite indicator in title section updates
+- [x] No regression in grid view favorite toggle
+
+---
+
+## 8. Resolution
+
+**Status**: ✅ **FIXED**  
+**Date**: 2026-01-12  
+
+**Solution Applied**: Option A - Watch video from state
+
+The `video_detail_screen.dart` was updated to:
+1. Watch `videosProvider` state in the `build` method
+2. Look up the current video using `video.videoId` as a key
+3. Pass `currentVideo` to all helper methods instead of using the immutable `video` constructor parameter
+
+This ensures the UI rebuilds when the video's favorite status changes in the state.

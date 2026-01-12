@@ -176,8 +176,9 @@ Planned future tickets for extended functionality. **📋 PLANNED**
 | Ticket | Title | Type | Status | Priority | Comments |
 |--------|-------|------|--------|----------|----------|
 | [T026](../tickets/T026-monolith-merge-evaluation.md) | Frontend/Backend Monolith Merge | Architecture | **Complete** | Medium | Merged into single container, multi-stage Dockerfile |
-| [T027](../tickets/T027-flutter-mobile-app.md) | VidKeep Flutter Mobile App | Feature | **In Progress** | Medium | Cross-platform mobile app (Android + iOS) - Phase 1 Scaffolding Complete |
+| [T027](../tickets/T027-flutter-mobile-app.md) | VidKeep Flutter Mobile App | Feature | **In Progress** | Medium | Phases 1-6 Complete (Setup→Detail Screen), Phase 7 Testing pending |
 | [T028](../tickets/T028-embedded-worker-process-pool.md) | Embedded Worker Process Pool | Architecture | **Complete** | Medium | Replaced ARQ with embedded WorkerManager, Prometheus metrics, resume capability |
+| [BUG-005](../tickets/BUG-005-favorite-icon-not-updating.md) | Mobile: Favorite Icon Not Updating | Bug | **Complete** | Medium | Fixed state watching in VideoDetailScreen and VideoCard |
 
 ---
 

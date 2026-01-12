@@ -21,35 +21,42 @@ class VideoDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch video from state to get live updates (fixes BUG-005)
+    final videosState = ref.watch(videosProvider);
+    final currentVideo = videosState.videos.firstWhere(
+      (v) => v.videoId == video.videoId,
+      orElse: () => video, // Fallback to original if not found
+    );
+    
     final videoRepo = ref.watch(videoRepositoryProvider);
-    final thumbnailUrl = videoRepo?.getThumbnailUrl(video.videoId);
+    final thumbnailUrl = videoRepo?.getThumbnailUrl(currentVideo.videoId);
     
     return Scaffold(
       backgroundColor: AppColors.terminalBg,
       body: CustomScrollView(
         slivers: [
-          _buildAppBar(context),
+          _buildAppBar(context, currentVideo),
           SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildThumbnail(context, thumbnailUrl),
-                _buildTitleSection(),
-                _buildMetadataSection(),
-                _buildDescriptionSection(),
-                if (video.status == VideoStatus.failed && video.errorMessage != null)
-                  _buildErrorSection(),
+                _buildThumbnail(context, thumbnailUrl, currentVideo),
+                _buildTitleSection(currentVideo),
+                _buildMetadataSection(currentVideo),
+                _buildDescriptionSection(currentVideo),
+                if (currentVideo.status == VideoStatus.failed && currentVideo.errorMessage != null)
+                  _buildErrorSection(currentVideo),
                 const SizedBox(height: 100), // Space for bottom bar
               ],
             ),
           ),
         ],
       ),
-      bottomNavigationBar: _buildActionBar(context, ref),
+      bottomNavigationBar: _buildActionBar(context, ref, currentVideo),
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
+  Widget _buildAppBar(BuildContext context, Video currentVideo) {
     return SliverAppBar(
       backgroundColor: AppColors.terminalBg,
       pinned: true,
@@ -71,7 +78,7 @@ class VideoDetailScreen extends ConsumerWidget {
           icon: const Icon(Icons.link, color: AppColors.neonGreen),
           tooltip: 'Copy YouTube URL',
           onPressed: () {
-            Clipboard.setData(ClipboardData(text: video.youtubeUrl));
+            Clipboard.setData(ClipboardData(text: currentVideo.youtubeUrl));
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
@@ -88,10 +95,10 @@ class VideoDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildThumbnail(BuildContext context, String? thumbnailUrl) {
+  Widget _buildThumbnail(BuildContext context, String? thumbnailUrl, Video currentVideo) {
     return GestureDetector(
-      onTap: video.isPlayable
-          ? () => _openPlayer(context)
+      onTap: currentVideo.isPlayable
+          ? () => _openPlayer(context, currentVideo)
           : null,
       child: AspectRatio(
         aspectRatio: 16 / 9,
@@ -99,17 +106,17 @@ class VideoDetailScreen extends ConsumerWidget {
           fit: StackFit.expand,
           children: [
             // Thumbnail or placeholder
-            if (thumbnailUrl != null && video.isPlayable)
+            if (thumbnailUrl != null && currentVideo.isPlayable)
               CachedNetworkImage(
                 imageUrl: thumbnailUrl,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => _buildPlaceholder(),
-                errorWidget: (context, url, error) => _buildPlaceholder(),
+                placeholder: (context, url) => _buildPlaceholder(currentVideo),
+                errorWidget: (context, url, error) => _buildPlaceholder(currentVideo),
               )
             else
-              _buildPlaceholder(),
+              _buildPlaceholder(currentVideo),
             // Play button overlay for playable videos
-            if (video.isPlayable)
+            if (currentVideo.isPlayable)
               Center(
                 child: Container(
                   padding: const EdgeInsets.all(16),
@@ -125,9 +132,9 @@ class VideoDetailScreen extends ConsumerWidget {
                 ),
               ),
             // Status overlay for non-playable
-            if (!video.isPlayable) _buildStatusOverlay(),
+            if (!currentVideo.isPlayable) _buildStatusOverlay(currentVideo),
             // Duration badge
-            if (video.durationSeconds != null)
+            if (currentVideo.durationSeconds != null)
               Positioned(
                 right: 8,
                 bottom: 8,
@@ -138,7 +145,7 @@ class VideoDetailScreen extends ConsumerWidget {
                     border: Border.all(color: AppColors.neonGreen, width: 1),
                   ),
                   child: Text(
-                    Formatters.formatDuration(video.durationSeconds),
+                    Formatters.formatDuration(currentVideo.durationSeconds),
                     style: GoogleFonts.shareTechMono(
                       color: AppColors.neonGreen,
                       fontSize: 12,
@@ -152,12 +159,12 @@ class VideoDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPlaceholder() {
+  Widget _buildPlaceholder(Video currentVideo) {
     return Container(
       color: AppColors.cardBg,
       child: Center(
         child: Icon(
-          video.isLoading ? Icons.downloading : Icons.videocam_outlined,
+          currentVideo.isLoading ? Icons.downloading : Icons.videocam_outlined,
           color: AppColors.neonGreen.withValues(alpha: 0.3),
           size: 64,
         ),
@@ -165,12 +172,12 @@ class VideoDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatusOverlay() {
+  Widget _buildStatusOverlay(Video currentVideo) {
     Color statusColor;
     String statusText;
     IconData statusIcon;
 
-    switch (video.status) {
+    switch (currentVideo.status) {
       case VideoStatus.queued:
         statusColor = AppColors.statusQueued;
         statusText = 'QUEUED';
@@ -178,7 +185,7 @@ class VideoDetailScreen extends ConsumerWidget {
         break;
       case VideoStatus.downloading:
         statusColor = AppColors.statusDownloading;
-        statusText = 'DOWNLOADING ${video.downloadProgress ?? 0}%';
+        statusText = 'DOWNLOADING ${currentVideo.downloadProgress ?? 0}%';
         statusIcon = Icons.downloading;
         break;
       case VideoStatus.resuming:
@@ -216,12 +223,12 @@ class VideoDetailScreen extends ConsumerWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            if (video.isLoading && video.downloadProgress != null) ...[
+            if (currentVideo.isLoading && currentVideo.downloadProgress != null) ...[
               const SizedBox(height: 16),
               SizedBox(
                 width: 200,
                 child: LinearProgressIndicator(
-                  value: (video.downloadProgress ?? 0) / 100,
+                  value: (currentVideo.downloadProgress ?? 0) / 100,
                   backgroundColor: AppColors.darkGreen,
                   valueColor: AlwaysStoppedAnimation<Color>(statusColor),
                 ),
@@ -233,7 +240,7 @@ class VideoDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTitleSection() {
+  Widget _buildTitleSection(Video currentVideo) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
@@ -246,7 +253,7 @@ class VideoDetailScreen extends ConsumerWidget {
         children: [
           // Title
           Text(
-            video.title,
+            currentVideo.title,
             style: GoogleFonts.shareTechMono(
               color: AppColors.textPrimary,
               fontSize: 16,
@@ -261,16 +268,13 @@ class VideoDetailScreen extends ConsumerWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  video.channelName.toUpperCase(),
+                  currentVideo.channelName.toUpperCase(),
                   style: GoogleFonts.shareTechMono(
                     color: AppColors.neonGreen,
                     fontSize: 13,
                   ),
                 ),
               ),
-              // Favorite indicator
-              if (video.isFavorite)
-                const Icon(Icons.favorite, color: AppColors.neonGreen, size: 18),
             ],
           ),
         ],
@@ -278,7 +282,7 @@ class VideoDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMetadataSection() {
+  Widget _buildMetadataSection(Video currentVideo) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
@@ -290,40 +294,40 @@ class VideoDetailScreen extends ConsumerWidget {
         children: [
           _buildMetadataRow(
             'STATUS',
-            _getStatusText(),
-            _getStatusColor(),
+            _getStatusText(currentVideo),
+            _getStatusColor(currentVideo),
           ),
           const SizedBox(height: 12),
           _buildMetadataRow(
             'DURATION',
-            Formatters.formatDuration(video.durationSeconds),
+            Formatters.formatDuration(currentVideo.durationSeconds),
             AppColors.textPrimary,
           ),
           const SizedBox(height: 12),
           _buildMetadataRow(
             'FILE SIZE',
-            Formatters.formatFileSize(video.fileSizeBytes),
+            Formatters.formatFileSize(currentVideo.fileSizeBytes),
             AppColors.textPrimary,
           ),
-          if (video.uploadDate != null) ...[
+          if (currentVideo.uploadDate != null) ...[
             const SizedBox(height: 12),
             _buildMetadataRow(
               'UPLOAD DATE',
-              _formatUploadDate(video.uploadDate!),
+              _formatUploadDate(currentVideo.uploadDate!),
               AppColors.textPrimary,
             ),
           ],
           const SizedBox(height: 12),
           _buildMetadataRow(
             'ADDED',
-            Formatters.formatRelativeDate(video.createdAt),
+            Formatters.formatRelativeDate(currentVideo.createdAt),
             AppColors.textSecondary,
           ),
-          if (video.retryCount > 0) ...[
+          if (currentVideo.retryCount > 0) ...[
             const SizedBox(height: 12),
             _buildMetadataRow(
               'RETRY COUNT',
-              '${video.retryCount}/3',
+              '${currentVideo.retryCount}/3',
               AppColors.statusFailed,
             ),
           ],
@@ -358,12 +362,12 @@ class VideoDetailScreen extends ConsumerWidget {
     );
   }
 
-  String _getStatusText() {
-    switch (video.status) {
+  String _getStatusText(Video currentVideo) {
+    switch (currentVideo.status) {
       case VideoStatus.queued:
         return 'QUEUED';
       case VideoStatus.downloading:
-        return 'DOWNLOADING ${video.downloadProgress ?? 0}%';
+        return 'DOWNLOADING ${currentVideo.downloadProgress ?? 0}%';
       case VideoStatus.resuming:
         return 'RESUMING';
       case VideoStatus.complete:
@@ -375,8 +379,8 @@ class VideoDetailScreen extends ConsumerWidget {
     }
   }
 
-  Color _getStatusColor() {
-    switch (video.status) {
+  Color _getStatusColor(Video currentVideo) {
+    switch (currentVideo.status) {
       case VideoStatus.queued:
         return AppColors.statusQueued;
       case VideoStatus.downloading:
@@ -400,8 +404,8 @@ class VideoDetailScreen extends ConsumerWidget {
     return uploadDate;
   }
 
-  Widget _buildDescriptionSection() {
-    final description = video.description;
+  Widget _buildDescriptionSection(Video currentVideo) {
+    final description = currentVideo.description;
     if (description == null || description.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
@@ -448,7 +452,7 @@ class VideoDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorSection() {
+  Widget _buildErrorSection(Video currentVideo) {
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(12),
@@ -475,7 +479,7 @@ class VideoDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            video.errorMessage!,
+            currentVideo.errorMessage!,
             style: GoogleFonts.shareTechMono(
               color: AppColors.textPrimary,
               fontSize: 11,
@@ -487,7 +491,7 @@ class VideoDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildActionBar(BuildContext context, WidgetRef ref) {
+  Widget _buildActionBar(BuildContext context, WidgetRef ref, Video currentVideo) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
@@ -500,33 +504,33 @@ class VideoDetailScreen extends ConsumerWidget {
         child: Row(
           children: [
             // Play button (for complete videos)
-            if (video.isPlayable)
+            if (currentVideo.isPlayable)
               Expanded(
                 child: _buildActionButton(
                   icon: Icons.play_arrow,
                   label: 'PLAY',
                   color: AppColors.neonGreen,
-                  onTap: () => _openPlayer(context),
+                  onTap: () => _openPlayer(context, currentVideo),
                 ),
               ),
             // Cancel button (for loading videos)
-            if (video.isLoading)
+            if (currentVideo.isLoading)
               Expanded(
                 child: _buildActionButton(
                   icon: Icons.cancel_outlined,
                   label: 'CANCEL',
                   color: AppColors.statusFailed,
-                  onTap: () => _cancelDownload(context, ref),
+                  onTap: () => _cancelDownload(context, ref, currentVideo),
                 ),
               ),
-            if ((video.isPlayable || video.isLoading)) const SizedBox(width: 12),
+            if ((currentVideo.isPlayable || currentVideo.isLoading)) const SizedBox(width: 12),
             // Favorite button
             Expanded(
               child: _buildActionButton(
-                icon: video.isFavorite ? Icons.favorite : Icons.favorite_outline,
-                label: video.isFavorite ? 'UNFAV' : 'FAVORITE',
+                icon: currentVideo.isFavorite ? Icons.favorite : Icons.favorite_outline,
+                label: currentVideo.isFavorite ? 'UNFAV' : 'FAVORITE',
                 color: AppColors.neonGreen,
-                onTap: () => _toggleFavorite(context, ref),
+                onTap: () => _toggleFavorite(context, ref, currentVideo),
               ),
             ),
             const SizedBox(width: 12),
@@ -536,7 +540,7 @@ class VideoDetailScreen extends ConsumerWidget {
                 icon: Icons.delete_outline,
                 label: 'DELETE',
                 color: AppColors.statusFailed,
-                onTap: () => _deleteVideo(context, ref),
+                onTap: () => _deleteVideo(context, ref, currentVideo),
               ),
             ),
           ],
@@ -577,30 +581,18 @@ class VideoDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _openPlayer(BuildContext context) {
+  void _openPlayer(BuildContext context, Video currentVideo) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => VideoPlayerScreen(video: video),
+        builder: (context) => VideoPlayerScreen(video: currentVideo),
       ),
     );
   }
 
-  void _toggleFavorite(BuildContext context, WidgetRef ref) async {
+  void _toggleFavorite(BuildContext context, WidgetRef ref, Video currentVideo) async {
     try {
-      await ref.read(videosProvider.notifier).toggleFavorite(video);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              video.isFavorite ? 'REMOVED FROM FAVORITES' : 'ADDED TO FAVORITES',
-              style: GoogleFonts.shareTechMono(fontSize: 12),
-            ),
-            backgroundColor: AppColors.darkGreen,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      await ref.read(videosProvider.notifier).toggleFavorite(currentVideo);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -616,7 +608,7 @@ class VideoDetailScreen extends ConsumerWidget {
     }
   }
 
-  void _cancelDownload(BuildContext context, WidgetRef ref) async {
+  void _cancelDownload(BuildContext context, WidgetRef ref, Video currentVideo) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -657,7 +649,7 @@ class VideoDetailScreen extends ConsumerWidget {
 
     if (confirm == true && context.mounted) {
       try {
-        await ref.read(videosProvider.notifier).cancelDownload(video.videoId);
+        await ref.read(videosProvider.notifier).cancelDownload(currentVideo.videoId);
         if (context.mounted) {
           Navigator.pop(context); // Go back after cancel
         }
@@ -677,7 +669,7 @@ class VideoDetailScreen extends ConsumerWidget {
     }
   }
 
-  void _deleteVideo(BuildContext context, WidgetRef ref) async {
+  void _deleteVideo(BuildContext context, WidgetRef ref, Video currentVideo) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -718,7 +710,7 @@ class VideoDetailScreen extends ConsumerWidget {
 
     if (confirm == true && context.mounted) {
       try {
-        await ref.read(videosProvider.notifier).deleteVideo(video.videoId);
+        await ref.read(videosProvider.notifier).deleteVideo(currentVideo.videoId);
         if (context.mounted) {
           Navigator.pop(context); // Go back after delete
         }

@@ -1185,7 +1185,13 @@ The following sections should be added to this ticket once the above decisions a
 | 2026-01-12 | Phase 6 | Navigation | Added "VIEW DETAILS" option to video card context menu |
 | 2026-01-12 | Phase 6 | Actions | Play/Favorite/Delete/Cancel buttons in bottom action bar |
 | 2026-01-12 | Phase 6 | Build verified | `flutter analyze`: 0 issues ✅ |
-| 2026-01-12 | Phase 6 | **COMPLETE** | Manual testing passed ✅ |
+| 2026-01-12 | Phase 6 | Bug fix | BUG-005: Fixed favorite icon not updating in detail screen |
+| 2026-01-12 | Phase 6 | UI polish | Removed snackbar notification for favorite toggle |
+| 2026-01-12 | Phase 6 | UI polish | Removed favorite button from video player screen |
+| 2026-01-12 | Phase 6 | Enhancement | Context menu stays open after favorite toggle |
+| 2026-01-12 | Phase 6 | Enhancement | Context menu favorite icon updates in real-time |
+| 2026-01-12 | Phase 6 | UI polish | Removed redundant favorite indicator from detail title section |
+| 2026-01-12 | Phase 6 | **COMPLETE** | All features verified and working ✅ |
 
 ---
 

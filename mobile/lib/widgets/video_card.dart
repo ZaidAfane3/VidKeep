@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/video.dart';
+import '../../providers/video_providers.dart';
 
 /// Video card widget for grid display
-class VideoCard extends StatelessWidget {
+class VideoCard extends ConsumerWidget {
   final Video video;
   final String? thumbnailUrl;
   final VoidCallback? onTap;
@@ -27,10 +29,10 @@ class VideoCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: onTap,
-      onLongPress: () => _showContextMenu(context),
+      onLongPress: () => _showContextMenu(context, ref),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.cardBg,
@@ -47,86 +49,97 @@ class VideoCard extends StatelessWidget {
     );
   }
 
-  void _showContextMenu(BuildContext context) {
+  void _showContextMenu(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.cardBg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-      builder: (context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Title bar
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                video.title,
-                style: GoogleFonts.shareTechMono(
-                  color: AppColors.textPrimary,
-                  fontSize: 12,
+      builder: (sheetContext) => Consumer(
+        builder: (consumerContext, consumerRef, child) {
+          // Watch state to get live updates
+          final videosState = consumerRef.watch(videosProvider);
+          final currentVideo = videosState.videos.firstWhere(
+            (v) => v.videoId == video.videoId,
+            orElse: () => video,
+          );
+          
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Title bar
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    currentVideo.title,
+                    style: GoogleFonts.shareTechMono(
+                      color: AppColors.textPrimary,
+                      fontSize: 12,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const Divider(color: AppColors.borderColor, height: 1),
-            // Favorite option
-            ListTile(
-              leading: Icon(
-                video.isFavorite ? Icons.favorite : Icons.favorite_outline,
-                color: AppColors.neonGreen,
-              ),
-              title: Text(
-                video.isFavorite ? 'REMOVE FAVORITE' : 'ADD TO FAVORITES',
-                style: GoogleFonts.shareTechMono(color: AppColors.textPrimary, fontSize: 12),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                onFavorite?.call();
-              },
-            ),
-            // View details option
-            ListTile(
-              leading: const Icon(Icons.info_outline, color: AppColors.neonGreen),
-              title: Text(
-                'VIEW DETAILS',
-                style: GoogleFonts.shareTechMono(color: AppColors.textPrimary, fontSize: 12),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                onDetails?.call();
-              },
-            ),
-            // Cancel option (for downloading videos)
-            if (video.isLoading)
-              ListTile(
-                leading: const Icon(Icons.cancel_outlined, color: AppColors.statusFailed),
-                title: Text(
-                  'CANCEL DOWNLOAD',
-                  style: GoogleFonts.shareTechMono(color: AppColors.statusFailed, fontSize: 12),
+                const Divider(color: AppColors.borderColor, height: 1),
+                // Favorite option
+                ListTile(
+                  leading: Icon(
+                    currentVideo.isFavorite ? Icons.favorite : Icons.favorite_outline,
+                    color: AppColors.neonGreen,
+                  ),
+                  title: Text(
+                    currentVideo.isFavorite ? 'REMOVE FAVORITE' : 'ADD TO FAVORITES',
+                    style: GoogleFonts.shareTechMono(color: AppColors.textPrimary, fontSize: 12),
+                  ),
+                  onTap: () {
+                    // Use currentVideo from state for correct toggle behavior
+                    consumerRef.read(videosProvider.notifier).toggleFavorite(currentVideo);
+                  },
                 ),
-                onTap: () {
-                  Navigator.pop(context);
-                  onCancel?.call();
-                },
-              ),
-            // Delete option (for completed/failed videos)
-            if (!video.isLoading)
-              ListTile(
-                leading: const Icon(Icons.delete_outline, color: AppColors.statusFailed),
-                title: Text(
-                  'DELETE VIDEO',
-                  style: GoogleFonts.shareTechMono(color: AppColors.statusFailed, fontSize: 12),
+                // View details option
+                ListTile(
+                  leading: const Icon(Icons.info_outline, color: AppColors.neonGreen),
+                  title: Text(
+                    'VIEW DETAILS',
+                    style: GoogleFonts.shareTechMono(color: AppColors.textPrimary, fontSize: 12),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    onDetails?.call();
+                  },
                 ),
-                onTap: () {
-                  Navigator.pop(context);
-                  onDelete?.call();
-                },
-              ),
-          ],
-        ),
+                // Cancel option (for downloading videos)
+                if (currentVideo.isLoading)
+                  ListTile(
+                    leading: const Icon(Icons.cancel_outlined, color: AppColors.statusFailed),
+                    title: Text(
+                      'CANCEL DOWNLOAD',
+                      style: GoogleFonts.shareTechMono(color: AppColors.statusFailed, fontSize: 12),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      onCancel?.call();
+                    },
+                  ),
+                // Delete option (for completed/failed videos)
+                if (!currentVideo.isLoading)
+                  ListTile(
+                    leading: const Icon(Icons.delete_outline, color: AppColors.statusFailed),
+                    title: Text(
+                      'DELETE VIDEO',
+                      style: GoogleFonts.shareTechMono(color: AppColors.statusFailed, fontSize: 12),
+                    ),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      onDelete?.call();
+                    },
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
