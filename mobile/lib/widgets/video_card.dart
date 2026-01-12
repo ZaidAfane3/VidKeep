@@ -13,6 +13,7 @@ class VideoCard extends StatelessWidget {
   final VoidCallback? onFavorite;
   final VoidCallback? onDelete;
   final VoidCallback? onCancel;
+  final VoidCallback? onDetails;
 
   const VideoCard({
     super.key,
@@ -22,6 +23,7 @@ class VideoCard extends StatelessWidget {
     this.onFavorite,
     this.onDelete,
     this.onCancel,
+    this.onDetails,
   });
 
   @override
@@ -83,6 +85,18 @@ class VideoCard extends StatelessWidget {
               onTap: () {
                 Navigator.pop(context);
                 onFavorite?.call();
+              },
+            ),
+            // View details option
+            ListTile(
+              leading: const Icon(Icons.info_outline, color: AppColors.neonGreen),
+              title: Text(
+                'VIEW DETAILS',
+                style: GoogleFonts.shareTechMono(color: AppColors.textPrimary, fontSize: 12),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                onDetails?.call();
               },
             ),
             // Cancel option (for downloading videos)

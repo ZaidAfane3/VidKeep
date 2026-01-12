@@ -8,6 +8,7 @@ import '../../providers/video_providers.dart';
 import '../../providers/providers.dart';
 import 'video_card.dart';
 import '../screens/player/video_player_screen.dart';
+import '../screens/video_detail/video_detail_screen.dart';
 
 /// Video grid widget with pull-to-refresh
 class VideoGrid extends ConsumerStatefulWidget {
@@ -211,6 +212,13 @@ class _VideoGridState extends ConsumerState<VideoGrid> {
                   ),
                 );
               }
+            },
+            onDetails: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => VideoDetailScreen(video: video),
+                ),
+              );
             },
             onFavorite: () {
               ref.read(videosProvider.notifier).toggleFavorite(video);
