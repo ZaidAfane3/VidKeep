@@ -11,7 +11,6 @@ QueueStatus _$QueueStatusFromJson(Map<String, dynamic> json) => QueueStatus(
   processing: (json['processing'] as num).toInt(),
   total: (json['total'] as num).toInt(),
   maxWorkers: (json['max_workers'] as num).toInt(),
-  activeWorkers: (json['active_workers'] as num).toInt(),
 );
 
 Map<String, dynamic> _$QueueStatusToJson(QueueStatus instance) =>
@@ -20,5 +19,4 @@ Map<String, dynamic> _$QueueStatusToJson(QueueStatus instance) =>
       'processing': instance.processing,
       'total': instance.total,
       'max_workers': instance.maxWorkers,
-      'active_workers': instance.activeWorkers,
     };

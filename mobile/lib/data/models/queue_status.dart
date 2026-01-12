@@ -11,16 +11,12 @@ class QueueStatus {
   
   @JsonKey(name: 'max_workers')
   final int maxWorkers;
-  
-  @JsonKey(name: 'active_workers')
-  final int activeWorkers;
 
   QueueStatus({
     required this.pending,
     required this.processing,
     required this.total,
     required this.maxWorkers,
-    required this.activeWorkers,
   });
 
   factory QueueStatus.fromJson(Map<String, dynamic> json) => _$QueueStatusFromJson(json);

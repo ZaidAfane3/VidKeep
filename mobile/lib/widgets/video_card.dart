@@ -28,6 +28,7 @@ class VideoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      onLongPress: () => _showContextMenu(context),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.cardBg,
@@ -38,6 +39,78 @@ class VideoCard extends StatelessWidget {
           children: [
             _buildThumbnail(),
             _buildInfo(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showContextMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardBg,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Title bar
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                video.title,
+                style: GoogleFonts.shareTechMono(
+                  color: AppColors.textPrimary,
+                  fontSize: 12,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const Divider(color: AppColors.borderColor, height: 1),
+            // Favorite option
+            ListTile(
+              leading: Icon(
+                video.isFavorite ? Icons.favorite : Icons.favorite_outline,
+                color: AppColors.neonGreen,
+              ),
+              title: Text(
+                video.isFavorite ? 'REMOVE FAVORITE' : 'ADD TO FAVORITES',
+                style: GoogleFonts.shareTechMono(color: AppColors.textPrimary, fontSize: 12),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                onFavorite?.call();
+              },
+            ),
+            // Cancel option (for downloading videos)
+            if (video.isLoading)
+              ListTile(
+                leading: const Icon(Icons.cancel_outlined, color: AppColors.statusFailed),
+                title: Text(
+                  'CANCEL DOWNLOAD',
+                  style: GoogleFonts.shareTechMono(color: AppColors.statusFailed, fontSize: 12),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  onCancel?.call();
+                },
+              ),
+            // Delete option (for completed/failed videos)
+            if (!video.isLoading)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: AppColors.statusFailed),
+                title: Text(
+                  'DELETE VIDEO',
+                  style: GoogleFonts.shareTechMono(color: AppColors.statusFailed, fontSize: 12),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  onDelete?.call();
+                },
+              ),
           ],
         ),
       ),

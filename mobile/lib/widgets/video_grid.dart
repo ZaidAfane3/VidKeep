@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -17,6 +18,8 @@ class VideoGrid extends ConsumerStatefulWidget {
 }
 
 class _VideoGridState extends ConsumerState<VideoGrid> {
+  Timer? _refreshTimer;
+
   @override
   void initState() {
     super.initState();
@@ -24,6 +27,18 @@ class _VideoGridState extends ConsumerState<VideoGrid> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(videosProvider.notifier).loadVideos();
     });
+    
+    // Periodic refresh every 10 seconds to catch external changes
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      ref.read(videosProvider.notifier).loadVideos();
+      ref.invalidate(queueStatusProvider);
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -199,6 +214,12 @@ class _VideoGridState extends ConsumerState<VideoGrid> {
             },
             onFavorite: () {
               ref.read(videosProvider.notifier).toggleFavorite(video);
+            },
+            onDelete: () {
+              ref.read(videosProvider.notifier).deleteVideo(video.videoId);
+            },
+            onCancel: () {
+              ref.read(videosProvider.notifier).cancelDownload(video.videoId);
             },
           );
         },

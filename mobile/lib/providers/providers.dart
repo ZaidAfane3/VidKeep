@@ -49,6 +49,12 @@ final apiClientProvider = Provider<VidKeepApiClient?>((ref) {
 final webSocketClientProvider = Provider<WebSocketClient>((ref) {
   final client = WebSocketClient();
   
+  // Connect immediately if API client exists
+  final apiClient = ref.read(apiClientProvider);
+  if (apiClient != null) {
+    client.connect(apiClient.getWebSocketUrl());
+  }
+  
   // Auto-connect when server URL changes
   ref.listen(apiClientProvider, (previous, next) {
     if (next != null) {

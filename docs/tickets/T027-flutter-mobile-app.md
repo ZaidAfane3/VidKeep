@@ -1170,7 +1170,16 @@ The following sections should be added to this ticket once the above decisions a
 | 2026-01-09 | Phase 4 | Navigation | Video card tap opens player (for playable videos) |
 | 2026-01-09 | Phase 4 | Build verified | `flutter analyze`: 0 issues, `flutter test`: 1/1 passed |
 | 2026-01-09 | Phase 4 | Bug fix | Fixed card sizing - constrained info section to 60px height |
-| 2026-01-09 | Phase 4 | **COMPLETE** | Manual testing passed - video player with chewie ✅ |
+| 2026-01-09 | Phase 4 | **COMPLETE** | Committed: "Phase 4 Done" (ee3d9c6) ✅ |
+| 2026-01-09 | Phase 5 | Queue | `queue_screen.dart` - Download queue with progress/cancel |
+| 2026-01-09 | Phase 5 | Filter | `channel_filter.dart` - Channel dropdown filter |
+| 2026-01-09 | Phase 5 | Long-press | Added context menu to video cards (fav/delete/cancel) |
+| 2026-01-09 | Phase 5 | Home | Updated with QueueScreen and channel filter bar |
+| 2026-01-09 | Phase 5 | Build verified | `flutter analyze`: 0 issues, `flutter test`: 1/1 passed |
+| 2026-01-10 | Phase 5 | UI improve | Moved channel filter from dropdown to AppBar icon + bottom sheet |
+| 2026-01-10 | Phase 5 | Bug fix | Fixed "ALL CHANNELS" not resetting filter (copyWith null issue) |
+| 2026-01-10 | Phase 5 | Bug fix | Fixed queue status error - removed `activeWorkers` field not in backend |
+| 2026-01-10 | Phase 5 | Feature | Real-time WebSocket updates for queue progress and status |
 
 ---
 
