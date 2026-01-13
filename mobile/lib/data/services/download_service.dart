@@ -349,6 +349,58 @@ class DownloadService {
     return _db.getTotalStorageUsed();
   }
 
+  /// Delete all downloaded videos and clear database
+  /// This is atomic - either all files are deleted and DB is cleared, or none
+  Future<bool> deleteAllDownloads() async {
+    try {
+      // Get all downloads from database
+      final downloads = await _db.getCompletedDownloads();
+      
+      if (downloads.isEmpty) {
+        return true; // Nothing to delete
+      }
+      
+      // Collect files to delete
+      final filesToDelete = <File>[];
+      for (final download in downloads) {
+        final file = File(download.localPath);
+        if (await file.exists()) {
+          filesToDelete.add(file);
+        }
+      }
+      
+      // Delete all files first
+      for (final file in filesToDelete) {
+        try {
+          await file.delete();
+          debugPrint('[DownloadService] Deleted: ${file.path}');
+        } catch (e) {
+          debugPrint('[DownloadService] Failed to delete ${file.path}: $e');
+          // Continue deleting other files even if one fails
+        }
+      }
+      
+      // Clear all records from database
+      await _db.deleteAllDownloads();
+      
+      // Try to clean up the VidKeep directory if empty
+      final downloadDir = await getDownloadDirectory();
+      if (await downloadDir.exists()) {
+        final remaining = await downloadDir.list().length;
+        if (remaining == 0) {
+          await downloadDir.delete();
+          debugPrint('[DownloadService] Removed empty VidKeep directory');
+        }
+      }
+      
+      debugPrint('[DownloadService] All downloads cleared');
+      return true;
+    } catch (e) {
+      debugPrint('[DownloadService] Error clearing all downloads: $e');
+      return false;
+    }
+  }
+
   /// Handle download updates from background_downloader
   void _handleUpdate(TaskUpdate update) async {
     final videoId = update.task.metaData;

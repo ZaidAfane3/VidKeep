@@ -156,6 +156,11 @@ class AppDatabase extends _$AppDatabase {
     return (delete(downloadedVideos)..where((d) => d.videoId.equals(videoId))).go();
   }
   
+  /// Delete all download records
+  Future<int> deleteAllDownloads() {
+    return delete(downloadedVideos).go();
+  }
+  
   /// Get total storage used
   Future<int> getTotalStorageUsed() async {
     final downloads = await getCompletedDownloads();

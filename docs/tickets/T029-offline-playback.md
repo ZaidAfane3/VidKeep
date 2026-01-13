@@ -223,5 +223,7 @@ DOWNLOADS
 | 2026-01-13 | Enhancement | Smart retry logic | WebSocket stops reconnecting after 3 failures, resets on pull-to-refresh |
 | 2026-01-13 | Enhancement | Silenced error logs | Reduced console noise by only logging first WebSocket error |
 | 2026-01-13 | Bug Fix | Retry counter persistence | Fixed WebSocketChannel async connection causing premature retry counter reset |
-| 2026-01-13 | All | Testing complete | Offline playback verified on iOS Simulator |
+| 2026-01-13 | Enhancement | Android persistent storage | Android uses Downloads/VidKeep folder which persists after app uninstall |
+| 2026-01-13 | Enhancement | Clear All Downloads | Added button in Settings to atomically delete all videos and clear database |
+| 2026-01-13 | All | **COMPLETE** | All phases implemented and tested on iOS Simulator |
 

@@ -386,10 +386,114 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   );
                 },
               ),
+              const Divider(color: AppColors.borderColor, height: 1),
+              
+              // Clear All Downloads button
+              InkWell(
+                onTap: () => _showClearAllConfirmation(context, ref),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.delete_sweep, color: AppColors.statusFailed, size: 20),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'CLEAR ALL DOWNLOADS',
+                              style: GoogleFonts.shareTechMono(
+                                color: AppColors.textPrimary,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Delete all downloaded videos and free storage',
+                              style: GoogleFonts.shareTechMono(
+                                color: AppColors.textSecondary,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
       ],
+    );
+  }
+  
+  void _showClearAllConfirmation(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.terminalBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+          side: const BorderSide(color: AppColors.neonGreen, width: 1),
+        ),
+        title: Text(
+          'CLEAR ALL DOWNLOADS?',
+          style: GoogleFonts.shareTechMono(
+            color: AppColors.neonGreen,
+            fontSize: 14,
+          ),
+        ),
+        content: Text(
+          'This will delete all downloaded videos from your device. '
+          'Videos will still be available on the server.',
+          style: GoogleFonts.shareTechMono(
+            color: AppColors.textPrimary,
+            fontSize: 12,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'CANCEL',
+              style: GoogleFonts.shareTechMono(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final success = await ref.read(downloadActionsProvider.notifier).deleteAllDownloads();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success ? 'ALL DOWNLOADS CLEARED' : 'FAILED TO CLEAR DOWNLOADS',
+                      style: GoogleFonts.shareTechMono(fontSize: 12),
+                    ),
+                    backgroundColor: success ? AppColors.darkGreen : AppColors.statusFailed,
+                  ),
+                );
+                // Refresh storage display
+                ref.invalidate(downloadStorageUsedProvider);
+              }
+            },
+            child: Text(
+              'CLEAR ALL',
+              style: GoogleFonts.shareTechMono(
+                color: AppColors.statusFailed,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

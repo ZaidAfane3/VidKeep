@@ -244,6 +244,12 @@ class DownloadActionsNotifier extends Notifier<void> {
     final service = ref.read(downloadServiceProvider);
     return service.getLocalPath(videoId);
   }
+  
+  /// Delete all downloaded videos and clear database
+  Future<bool> deleteAllDownloads() async {
+    final service = ref.read(downloadServiceProvider);
+    return service.deleteAllDownloads();
+  }
 }
 
 final downloadActionsProvider = 
