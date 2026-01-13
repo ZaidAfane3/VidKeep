@@ -205,3 +205,25 @@ DOWNLOADS
 |------|-------|--------|---------|
 | 2026-01-12 | Planning | Ticket created | Decision matrix completed |
 | 2026-01-12 | Planning | Decisions finalized | All 8 decisions + additional features confirmed |
+| 2026-01-13 | Phase 1 | Started implementation | Added packages: background_downloader, drift, sqlite3_flutter_libs, path_provider, battery_plus |
+| 2026-01-13 | Phase 1 | Database created | Drift schema with DownloadedVideos and DownloadSettings tables |
+| 2026-01-13 | Phase 1 | Service created | DownloadService with queue management, WiFi-only mode, storage limits |
+| 2026-01-13 | Phase 1 | Providers created | Riverpod providers for database, service, settings, and download actions |
+| 2026-01-13 | Phase 1 | UI updated | VideoDetailScreen download button, VideoCard downloaded badge, VideoPlayerScreen offline playback |
+| 2026-01-13 | Phase 1 | Complete | All Phase 1 items implemented and compiling |
+| 2026-01-13 | Phase 2 | Settings UI | Added downloads section to settings screen with all configurable options |
+| 2026-01-13 | Phase 2 | Storage display | Implemented storage usage calculation with progress bar |
+| 2026-01-13 | Phase 3 | Offline playback | VideoPlayerScreen plays from local file when available |
+| 2026-01-13 | Phase 4 | Battery service | BatteryService monitors battery and auto-pauses downloads on low battery |
+| 2026-01-13 | Bug Fix | Download path fix | Fixed background_downloader to use relative directory path instead of absolute |
+| 2026-01-13 | Bug Fix | Path slash fix | Fixed missing leading slash in file paths from background_downloader |
+| 2026-01-13 | Bug Fix | Stale record cleanup | Added automatic cleanup of download records where file no longer exists (after app reinstall) |
+| 2026-01-13 | Enhancement | Files app visibility | Added UIFileSharingEnabled to Info.plist for iOS Files app access |
+| 2026-01-13 | Enhancement | Title-based filenames | Downloaded videos now use sanitized video title as filename instead of video ID |
+| 2026-01-13 | Enhancement | Smart retry logic | WebSocket stops reconnecting after 3 failures, resets on pull-to-refresh |
+| 2026-01-13 | Enhancement | Silenced error logs | Reduced console noise by only logging first WebSocket error |
+| 2026-01-13 | Bug Fix | Retry counter persistence | Fixed WebSocketChannel async connection causing premature retry counter reset |
+| 2026-01-13 | Enhancement | Android persistent storage | Android uses Downloads/VidKeep folder which persists after app uninstall |
+| 2026-01-13 | Enhancement | Clear All Downloads | Added button in Settings to atomically delete all videos and clear database |
+| 2026-01-13 | All | **COMPLETE** | All phases implemented and tested on iOS Simulator |
+

@@ -5,7 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/video.dart';
+import '../../data/models/downloaded_video.dart';
 import '../../providers/video_providers.dart';
+import '../../providers/download_providers.dart';
 
 /// Video card widget for grid display
 class VideoCard extends ConsumerWidget {
@@ -30,6 +32,10 @@ class VideoCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch download status for this video
+    final downloadStatus = ref.watch(videoDownloadStatusProvider(video.videoId));
+    final isDownloaded = downloadStatus.valueOrNull?.status == LocalDownloadStatus.complete;
+    
     return GestureDetector(
       onTap: onTap,
       onLongPress: () => _showContextMenu(context, ref),
@@ -41,7 +47,7 @@ class VideoCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildThumbnail(),
+            _buildThumbnail(isDownloaded: isDownloaded),
             _buildInfo(),
           ],
         ),
@@ -144,7 +150,7 @@ class VideoCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildThumbnail() {
+  Widget _buildThumbnail({bool isDownloaded = false}) {
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: Stack(
@@ -179,6 +185,14 @@ class VideoCard extends ConsumerWidget {
               right: 4,
               bottom: 4,
               child: _buildDurationBadge(),
+            ),
+          
+          // Downloaded badge (bottom-left)
+          if (isDownloaded && video.isPlayable)
+            Positioned(
+              left: 4,
+              bottom: 4,
+              child: _buildDownloadedBadge(),
             ),
           
           // Favorite indicator
@@ -300,6 +314,26 @@ class VideoCard extends ConsumerWidget {
         Icons.favorite,
         color: AppColors.neonGreen,
         size: 16,
+      ),
+    );
+  }
+  
+  Widget _buildDownloadedBadge() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.8),
+        border: Border.all(color: AppColors.neonGreen, width: 0.5),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.download_done,
+            color: AppColors.neonGreen,
+            size: 12,
+          ),
+        ],
       ),
     );
   }

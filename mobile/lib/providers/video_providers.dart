@@ -4,6 +4,7 @@ import '../data/models/channel.dart';
 import '../data/models/queue_status.dart';
 import '../data/datasources/websocket_client.dart';
 import 'providers.dart';
+import 'download_providers.dart';
 
 /// Videos list state
 class VideosState {
@@ -12,6 +13,7 @@ class VideosState {
   final String? error;
   final String? channelFilter;
   final bool favoritesOnly;
+  final bool isOfflineMode;
 
   const VideosState({
     this.videos = const [],
@@ -19,6 +21,7 @@ class VideosState {
     this.error,
     this.channelFilter,
     this.favoritesOnly = false,
+    this.isOfflineMode = false,
   });
 
   VideosState copyWith({
@@ -28,6 +31,7 @@ class VideosState {
     String? channelFilter,
     bool clearChannelFilter = false,
     bool? favoritesOnly,
+    bool? isOfflineMode,
   }) {
     return VideosState(
       videos: videos ?? this.videos,
@@ -35,6 +39,7 @@ class VideosState {
       error: error,
       channelFilter: clearChannelFilter ? null : (channelFilter ?? this.channelFilter),
       favoritesOnly: favoritesOnly ?? this.favoritesOnly,
+      isOfflineMode: isOfflineMode ?? this.isOfflineMode,
     );
   }
 }
@@ -49,11 +54,12 @@ class VideosNotifier extends StateNotifier<VideosState> {
   Future<void> loadVideos() async {
     final repo = _ref.read(videoRepositoryProvider);
     if (repo == null) {
-      state = state.copyWith(error: 'Server not configured');
+      // No server configured - try loading offline videos
+      await _loadOfflineVideos();
       return;
     }
 
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(isLoading: true, error: null, isOfflineMode: false);
 
     try {
       final apiVideos = await repo.getVideos(
@@ -79,14 +85,52 @@ class VideosNotifier extends StateNotifier<VideosState> {
         return v;
       }).toList();
       
-      state = state.copyWith(videos: mergedVideos, isLoading: false);
+      state = state.copyWith(videos: mergedVideos, isLoading: false, isOfflineMode: false);
     } catch (e) {
-      state = state.copyWith(error: e.toString(), isLoading: false);
+      // Server unreachable - fall back to offline videos
+      await _loadOfflineVideos();
     }
+  }
+  
+  /// Load videos from local database (offline mode)
+  Future<void> _loadOfflineVideos() async {
+    final offlineVideosAsync = _ref.read(offlineVideosProvider);
+    
+    offlineVideosAsync.when(
+      data: (offlineVideos) {
+        if (offlineVideos.isNotEmpty) {
+          state = state.copyWith(
+            videos: offlineVideos,
+            isLoading: false,
+            isOfflineMode: true,
+            error: null,
+          );
+        } else {
+          state = state.copyWith(
+            error: 'Server offline. No downloaded videos available.',
+            isLoading: false,
+            isOfflineMode: true,
+          );
+        }
+      },
+      loading: () => state = state.copyWith(isLoading: true),
+      error: (e, _) => state = state.copyWith(
+        error: 'Server offline. Could not load local videos.',
+        isLoading: false,
+        isOfflineMode: true,
+      ),
+    );
   }
 
   /// Refresh videos (pull-to-refresh)
-  Future<void> refresh() => loadVideos();
+  /// Also resets WebSocket retry counter to allow reconnection attempts
+  Future<void> refresh() {
+    // Reset WebSocket retry counter on refresh
+    final wsClient = _ref.read(webSocketClientProvider);
+    wsClient.resetRetries();
+    
+    return loadVideos();
+  }
 
   /// Set channel filter
   void setChannelFilter(String? channel) {

@@ -6,8 +6,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/video.dart';
+import '../../data/models/downloaded_video.dart';
 import '../../providers/providers.dart';
 import '../../providers/video_providers.dart';
+import '../../providers/download_providers.dart';
 import '../player/video_player_screen.dart';
 
 /// Video detail screen showing full metadata and actions
@@ -40,7 +42,7 @@ class VideoDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildThumbnail(context, thumbnailUrl, currentVideo),
+                _buildThumbnail(context, ref, thumbnailUrl, currentVideo),
                 _buildTitleSection(currentVideo),
                 _buildMetadataSection(currentVideo),
                 _buildDescriptionSection(currentVideo),
@@ -95,10 +97,10 @@ class VideoDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildThumbnail(BuildContext context, String? thumbnailUrl, Video currentVideo) {
+  Widget _buildThumbnail(BuildContext context, WidgetRef ref, String? thumbnailUrl, Video currentVideo) {
     return GestureDetector(
       onTap: currentVideo.isPlayable
-          ? () => _openPlayer(context, currentVideo)
+          ? () => _openPlayer(context, ref, currentVideo)
           : null,
       child: AspectRatio(
         aspectRatio: 16 / 9,
@@ -492,6 +494,14 @@ class VideoDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildActionBar(BuildContext context, WidgetRef ref, Video currentVideo) {
+    // Watch download status for this video
+    final downloadStatus = ref.watch(videoDownloadStatusProvider(currentVideo.videoId));
+    final localDownload = downloadStatus.valueOrNull;
+    final isDownloaded = localDownload?.status == LocalDownloadStatus.complete;
+    final isDownloading = localDownload?.status == LocalDownloadStatus.downloading ||
+                          localDownload?.status == LocalDownloadStatus.pending;
+    final isPaused = localDownload?.status == LocalDownloadStatus.paused;
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
@@ -510,7 +520,7 @@ class VideoDetailScreen extends ConsumerWidget {
                   icon: Icons.play_arrow,
                   label: 'PLAY',
                   color: AppColors.neonGreen,
-                  onTap: () => _openPlayer(context, currentVideo),
+                  onTap: () => _openPlayer(context, ref, currentVideo),
                 ),
               ),
             // Cancel button (for loading videos)
@@ -524,6 +534,21 @@ class VideoDetailScreen extends ConsumerWidget {
                 ),
               ),
             if ((currentVideo.isPlayable || currentVideo.isLoading)) const SizedBox(width: 12),
+            
+            // Download button (for complete videos on server)
+            if (currentVideo.isPlayable) ...[
+              Expanded(
+                child: _buildDownloadButton(
+                  context, ref, currentVideo, 
+                  isDownloaded: isDownloaded,
+                  isDownloading: isDownloading,
+                  isPaused: isPaused,
+                  progress: localDownload?.progress,
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
+            
             // Favorite button
             Expanded(
               child: _buildActionButton(
@@ -547,6 +572,51 @@ class VideoDetailScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+  
+  Widget _buildDownloadButton(
+    BuildContext context, 
+    WidgetRef ref, 
+    Video currentVideo, {
+    required bool isDownloaded,
+    required bool isDownloading,
+    required bool isPaused,
+    double? progress,
+  }) {
+    if (isDownloaded) {
+      // Downloaded - show delete button
+      return _buildActionButton(
+        icon: Icons.download_done,
+        label: 'SAVED',
+        color: AppColors.neonGreen,
+        onTap: () => _showDownloadedOptions(context, ref, currentVideo),
+      );
+    } else if (isDownloading) {
+      // Downloading - show progress and cancel option
+      final progressText = progress != null ? '${(progress * 100).toInt()}%' : '...';
+      return _buildActionButton(
+        icon: Icons.downloading,
+        label: progressText,
+        color: AppColors.statusDownloading,
+        onTap: () => _pauseLocalDownload(ref, currentVideo.videoId),
+      );
+    } else if (isPaused) {
+      // Paused - show resume option
+      return _buildActionButton(
+        icon: Icons.pause,
+        label: 'PAUSED',
+        color: AppColors.statusQueued,
+        onTap: () => _resumeLocalDownload(ref, currentVideo.videoId),
+      );
+    } else {
+      // Not downloaded - show download button
+      return _buildActionButton(
+        icon: Icons.download_outlined,
+        label: 'SAVE',
+        color: AppColors.neonGreen,
+        onTap: () => _startLocalDownload(context, ref, currentVideo),
+      );
+    }
   }
 
   Widget _buildActionButton({
@@ -581,13 +651,171 @@ class VideoDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _openPlayer(BuildContext context, Video currentVideo) {
+  void _openPlayer(BuildContext context, WidgetRef ref, Video currentVideo) async {
+    // Check if we have a local copy
+    final localPath = await ref.read(downloadActionsProvider.notifier).getLocalPath(currentVideo.videoId);
+    
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => VideoPlayerScreen(video: currentVideo),
+        builder: (context) => VideoPlayerScreen(
+          video: currentVideo,
+          localFilePath: localPath,
+        ),
       ),
     );
+  }
+  
+  void _startLocalDownload(BuildContext context, WidgetRef ref, Video currentVideo) async {
+    try {
+      final videoRepo = ref.read(videoRepositoryProvider);
+      if (videoRepo == null) return;
+      
+      final downloadUrl = videoRepo.getStreamUrl(currentVideo.videoId);
+      final thumbnailUrl = videoRepo.getThumbnailUrl(currentVideo.videoId);
+      
+      // Use video title as filename (sanitized for filesystem)
+      // Remove/replace invalid filename characters: / \ : * ? " < > |
+      final sanitizedTitle = currentVideo.title
+          .replaceAll(RegExp(r'[/\\:*?"<>|]'), '_')
+          .replaceAll(RegExp(r'\s+'), ' ')  // Collapse multiple spaces
+          .trim();
+      final filename = '$sanitizedTitle.mp4';
+      
+      // Pass video metadata for offline display
+      final success = await ref.read(downloadActionsProvider.notifier).startDownload(
+        videoId: currentVideo.videoId,
+        downloadUrl: downloadUrl,
+        filename: filename,
+        // Video metadata for offline display
+        title: currentVideo.title,
+        channelName: currentVideo.channelName,
+        youtubeUrl: currentVideo.youtubeUrl,
+        description: currentVideo.description,
+        durationSeconds: currentVideo.durationSeconds,
+        uploadDate: currentVideo.uploadDate,
+        fileSizeBytes: currentVideo.fileSizeBytes,
+        thumbnailUrl: thumbnailUrl,
+      );
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              success ? 'DOWNLOAD STARTED' : 'DOWNLOAD FAILED TO START',
+              style: GoogleFonts.shareTechMono(fontSize: 12),
+            ),
+            backgroundColor: success ? AppColors.darkGreen : AppColors.statusFailed,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'ERROR: ${e.toString()}',
+              style: GoogleFonts.shareTechMono(fontSize: 12),
+            ),
+            backgroundColor: AppColors.statusFailed,
+          ),
+        );
+      }
+    }
+  }
+  
+  void _pauseLocalDownload(WidgetRef ref, String videoId) {
+    ref.read(downloadActionsProvider.notifier).pauseDownload(videoId);
+  }
+  
+  void _resumeLocalDownload(WidgetRef ref, String videoId) {
+    ref.read(downloadActionsProvider.notifier).resumeDownload(videoId);
+  }
+  
+  void _showDownloadedOptions(BuildContext context, WidgetRef ref, Video currentVideo) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(0)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: AppColors.darkGreen),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.download_done, color: AppColors.neonGreen),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'SAVED FOR OFFLINE',
+                      style: GoogleFonts.shareTechMono(
+                        color: AppColors.neonGreen,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: AppColors.statusFailed),
+              title: Text(
+                'DELETE DOWNLOAD',
+                style: GoogleFonts.shareTechMono(
+                  color: AppColors.textPrimary,
+                  fontSize: 12,
+                ),
+              ),
+              subtitle: Text(
+                'Remove from device to free space',
+                style: GoogleFonts.shareTechMono(
+                  color: AppColors.textSecondary,
+                  fontSize: 10,
+                ),
+              ),
+              onTap: () => Navigator.pop(context, 'delete'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.close, color: AppColors.textSecondary),
+              title: Text(
+                'CANCEL',
+                style: GoogleFonts.shareTechMono(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              onTap: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      ),
+    );
+    
+    if (action == 'delete' && context.mounted) {
+      await ref.read(downloadActionsProvider.notifier).deleteDownload(currentVideo.videoId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'DOWNLOAD DELETED',
+              style: GoogleFonts.shareTechMono(fontSize: 12),
+            ),
+            backgroundColor: AppColors.darkGreen,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   void _toggleFavorite(BuildContext context, WidgetRef ref, Video currentVideo) async {
