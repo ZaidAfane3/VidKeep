@@ -123,7 +123,14 @@ class VideosNotifier extends StateNotifier<VideosState> {
   }
 
   /// Refresh videos (pull-to-refresh)
-  Future<void> refresh() => loadVideos();
+  /// Also resets WebSocket retry counter to allow reconnection attempts
+  Future<void> refresh() {
+    // Reset WebSocket retry counter on refresh
+    final wsClient = _ref.read(webSocketClientProvider);
+    wsClient.resetRetries();
+    
+    return loadVideos();
+  }
 
   /// Set channel filter
   void setChannelFilter(String? channel) {
