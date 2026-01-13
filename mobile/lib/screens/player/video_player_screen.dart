@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,12 +9,18 @@ import '../../core/theme/colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/video.dart';
 import '../../providers/providers.dart';
+import '../../providers/download_providers.dart';
 
 /// Full-screen video player using chewie
 class VideoPlayerScreen extends ConsumerStatefulWidget {
   final Video video;
+  final String? localFilePath; // Path to local file for offline playback
 
-  const VideoPlayerScreen({super.key, required this.video});
+  const VideoPlayerScreen({
+    super.key, 
+    required this.video,
+    this.localFilePath,
+  });
 
   @override
   ConsumerState<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
@@ -24,6 +31,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
   ChewieController? _chewieController;
   bool _isInitialized = false;
   String? _error;
+  bool _isPlayingOffline = false;
 
   @override
   void initState() {
@@ -32,18 +40,65 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
   }
 
   Future<void> _initializePlayer() async {
-    final videoRepo = ref.read(videoRepositoryProvider);
-    if (videoRepo == null) {
-      setState(() => _error = 'Server not configured');
-      return;
+    String? videoSource;
+    
+    debugPrint('[VideoPlayer] Initializing for video: ${widget.video.videoId}');
+    debugPrint('[VideoPlayer] localFilePath param: ${widget.localFilePath}');
+    
+    // Check if we have a local file from param
+    if (widget.localFilePath != null) {
+      final localFile = File(widget.localFilePath!);
+      final exists = await localFile.exists();
+      debugPrint('[VideoPlayer] Local file from param exists: $exists');
+      if (exists) {
+        videoSource = widget.localFilePath;
+        _isPlayingOffline = true;
+      }
+    }
+    
+    // If no local file from param, try to get from database
+    if (videoSource == null) {
+      debugPrint('[VideoPlayer] Checking database for local path...');
+      try {
+        final localPath = await ref.read(downloadActionsProvider.notifier).getLocalPath(widget.video.videoId);
+        debugPrint('[VideoPlayer] Database returned localPath: $localPath');
+        if (localPath != null) {
+          final localFile = File(localPath);
+          final exists = await localFile.exists();
+          debugPrint('[VideoPlayer] File exists at path: $exists');
+          if (exists) {
+            videoSource = localPath;
+            _isPlayingOffline = true;
+          }
+        }
+      } catch (e) {
+        debugPrint('[VideoPlayer] Error getting local path: $e');
+      }
+    }
+    
+    // Fall back to streaming if no local file
+    if (videoSource == null) {
+      debugPrint('[VideoPlayer] No local file found, trying server...');
+      final videoRepo = ref.read(videoRepositoryProvider);
+      if (videoRepo == null) {
+        debugPrint('[VideoPlayer] No video repository - offline mode');
+        setState(() => _error = 'Video not available offline');
+        return;
+      }
+      videoSource = videoRepo.getStreamUrl(widget.video.videoId);
+      debugPrint('[VideoPlayer] Streaming from: $videoSource');
     }
 
-    final streamUrl = videoRepo.getStreamUrl(widget.video.videoId);
-
     try {
-      _videoController = VideoPlayerController.networkUrl(
-        Uri.parse(streamUrl),
-      );
+      if (_isPlayingOffline) {
+        _videoController = VideoPlayerController.file(
+          File(videoSource),
+        );
+      } else {
+        _videoController = VideoPlayerController.networkUrl(
+          Uri.parse(videoSource),
+        );
+      }
 
       await _videoController!.initialize();
 
@@ -120,14 +175,24 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
           icon: const Icon(Icons.arrow_back, color: AppColors.neonGreen),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(
-          widget.video.title,
-          style: GoogleFonts.shareTechMono(
-            color: AppColors.neonGreen,
-            fontSize: 14,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        title: Row(
+          children: [
+            if (_isPlayingOffline) ...[
+              const Icon(Icons.download_done, color: AppColors.neonGreen, size: 16),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: Text(
+                widget.video.title,
+                style: GoogleFonts.shareTechMono(
+                  color: AppColors.neonGreen,
+                  fontSize: 14,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
       body: Column(
