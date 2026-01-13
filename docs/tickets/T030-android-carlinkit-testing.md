@@ -267,6 +267,9 @@ flutter devices
 | 2026-01-13 | Config | Player orientation fix | Platform-aware orientation restore in `video_player_screen.dart` |
 | 2026-01-13 | Testing | Emulator testing | All features verified: grid, playback, favorites, queue, WebSocket, orientation |
 | 2026-01-13 | Testing | Unit tests | All 44 tests passing |
+| 2026-01-13 | Bugfix | Offline Playback | Fixed `ExoPlayer Source error` by standardizing storage paths |
+| 2026-01-13 | Feature | Public Storage | Implemented downloads to `/storage/emulated/0/Download/VidKeep` for visibility |
+| 2026-01-13 | Testing | Public Storage | Verified file visibility in Files app and offline playback on emulator |
 
 ---
 
