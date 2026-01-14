@@ -39,37 +39,45 @@ class AppTheme {
       headlineLarge: GoogleFonts.shareTechMono(
         color: AppColors.neonGreen,
         fontSize: 28,
-        letterSpacing: 1.0,
+        letterSpacing: 0.5,
+        fontWeight: FontWeight.bold,
       ),
       headlineMedium: GoogleFonts.shareTechMono(
         color: AppColors.neonGreen,
         fontSize: 24,
-        letterSpacing: 1.0,
+        letterSpacing: 0.5,
+        fontWeight: FontWeight.bold,
       ),
       titleLarge: GoogleFonts.shareTechMono(
         color: AppColors.textPrimary,
         fontSize: 18,
+        fontWeight: FontWeight.bold,
       ),
       titleMedium: GoogleFonts.shareTechMono(
         color: AppColors.textPrimary,
         fontSize: 16,
+        fontWeight: FontWeight.bold,
       ),
       bodyLarge: GoogleFonts.shareTechMono(
         color: AppColors.textPrimary,
         fontSize: 14,
+        fontWeight: FontWeight.w500,
       ),
       bodyMedium: GoogleFonts.shareTechMono(
         color: AppColors.textPrimary,
         fontSize: 13,
+        fontWeight: FontWeight.w500,
       ),
       bodySmall: GoogleFonts.shareTechMono(
         color: AppColors.textSecondary,
         fontSize: 12,
+        fontWeight: FontWeight.w500,
       ),
       labelLarge: GoogleFonts.shareTechMono(
         color: AppColors.neonGreen,
         fontSize: 14,
-        letterSpacing: 1.0,
+        letterSpacing: 0.5,
+        fontWeight: FontWeight.bold,
       ),
     );
   }

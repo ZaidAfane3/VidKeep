@@ -76,38 +76,22 @@ class DownloadService {
   Stream<DownloadStatusEvent> get statusStream => _statusController.stream;
 
   /// Get the download directory for videos
+  /// Android: Public Download directory (visible to user)
+  /// iOS: Application Documents directory
   Future<Directory> getDownloadDirectory() async {
-    Directory baseDir;
-    
-    if (Platform.isIOS) {
-      // iOS: Use Documents directory (visible in Files app)
-      baseDir = await getApplicationDocumentsDirectory();
+    Directory downloadDir;
+    if (Platform.isAndroid) {
+      // Use standard public Download directory
+      // /storage/emulated/0/Download/VidKeep
+      downloadDir = Directory('/storage/emulated/0/Download/VidKeep');
     } else {
-      // Android: Use Downloads or Movies directory (visible in file manager)
-      // Try external storage first, fall back to app documents
-      final externalDirs = await getExternalStorageDirectories();
-      if (externalDirs != null && externalDirs.isNotEmpty) {
-        // Go up to get to the root external storage, then to Download
-        final parts = externalDirs.first.path.split('/');
-        final androidIndex = parts.indexOf('Android');
-        if (androidIndex > 0) {
-          baseDir = Directory('${parts.sublist(0, androidIndex).join('/')}/Download');
-          if (!await baseDir.exists()) {
-            baseDir = await getApplicationDocumentsDirectory();
-          }
-        } else {
-          baseDir = await getApplicationDocumentsDirectory();
-        }
-      } else {
-        baseDir = await getApplicationDocumentsDirectory();
-      }
+       final baseDir = await getApplicationDocumentsDirectory();
+       downloadDir = Directory(p.join(baseDir.path, 'VidKeep'));
     }
     
-    final downloadDir = Directory(p.join(baseDir.path, 'VidKeep'));
     if (!await downloadDir.exists()) {
       await downloadDir.create(recursive: true);
     }
-    
     return downloadDir;
   }
 
@@ -162,32 +146,42 @@ class DownloadService {
       }
     }
 
-    // Get download directory - we need both relative (for downloader) and absolute (for DB)
     final downloadDir = await getDownloadDirectory();
     final filePath = p.join(downloadDir.path, filename);
     
-    // background_downloader expects RELATIVE path from Documents directory
-    const relativeDir = 'VidKeep';
-    
     debugPrint('[DownloadService] Starting download:');
     debugPrint('[DownloadService] URL: $downloadUrl');
-    debugPrint('[DownloadService] Relative directory: $relativeDir');
-    debugPrint('[DownloadService] Absolute directory: ${downloadDir.path}');
+    debugPrint('[DownloadService] Target directory: ${downloadDir.path}');
     debugPrint('[DownloadService] Filename: $filename');
-    debugPrint('[DownloadService] Full path for DB: $filePath');
+    debugPrint('[DownloadService] Full path: $filePath');
 
-    // Create download task with RELATIVE directory
-    // baseDirectory defaults to BaseDirectory.applicationDocuments
-    final task = DownloadTask(
-      url: downloadUrl,
-      filename: filename,
-      directory: relativeDir,  // RELATIVE path, not absolute!
-      baseDirectory: BaseDirectory.applicationDocuments,
-      updates: Updates.statusAndProgress,
-      requiresWiFi: settings.wifiOnly,
-      retries: 3,
-      metaData: videoId,
-    );
+    // Configure task based on platform
+    final DownloadTask task;
+    if (Platform.isAndroid) {
+      // Android: Public storage requires BaseDirectory.root and absolute path
+      task = DownloadTask(
+        url: downloadUrl,
+        filename: filename,
+        directory: downloadDir.path, // Absolute path
+        baseDirectory: BaseDirectory.root,
+        updates: Updates.statusAndProgress,
+        requiresWiFi: settings.wifiOnly,
+        retries: 3,
+        metaData: videoId,
+      );
+    } else {
+      // iOS: ApplicationDocuments requires relative path
+      task = DownloadTask(
+        url: downloadUrl,
+        filename: filename,
+        directory: 'VidKeep', // Relative to Documents
+        baseDirectory: BaseDirectory.applicationDocuments,
+        updates: Updates.statusAndProgress,
+        requiresWiFi: settings.wifiOnly,
+        retries: 3,
+        metaData: videoId,
+      );
+    }
 
     // Save to database with all metadata in one table
     await _db.upsertDownload(DownloadedVideosCompanion(
@@ -246,13 +240,51 @@ class DownloadService {
 
   /// Resume a paused download
   Future<void> resumeDownload(String videoId) async {
-    final task = _activeTasks[videoId];
+    var task = _activeTasks[videoId];
+    
+    // If not in memory, try to find from FileDownloader's database
+    if (task == null) {
+      final records = await FileDownloader().database.allRecords();
+      final existingRecord = records
+          .where((r) => r.task.metaData == videoId && r.task is DownloadTask)
+          .firstOrNull;
+      
+      if (existingRecord != null) {
+        task = existingRecord.task as DownloadTask;
+        _activeTasks[videoId] = task;
+        debugPrint('[DownloadService] Recovered task for $videoId from FileDownloader database');
+      }
+    }
+    
     if (task != null) {
-      await FileDownloader().resume(task);
-      await _db.updateStatus(videoId, 'downloading');
+      final success = await FileDownloader().resume(task);
+      debugPrint('[DownloadService] Resume result for $videoId: $success');
+      if (success) {
+        await _db.updateStatus(videoId, 'downloading');
+        _statusController.add(DownloadStatusEvent(
+          videoId: videoId,
+          status: LocalDownloadStatus.downloading,
+        ));
+      } else {
+        // Resume failed - task may have been lost, need to re-download
+        debugPrint('[DownloadService] Resume failed for $videoId, task may be lost');
+        await _db.updateStatus(videoId, 'failed', 
+          errorMessage: 'Resume failed. Please delete and re-download.');
+        _statusController.add(DownloadStatusEvent(
+          videoId: videoId,
+          status: LocalDownloadStatus.failed,
+          error: 'Resume failed. Please delete and re-download.',
+        ));
+      }
+    } else {
+      // No task found at all - mark as failed
+      debugPrint('[DownloadService] No task found for $videoId to resume');
+      await _db.updateStatus(videoId, 'failed', 
+        errorMessage: 'Download task lost. Please delete and re-download.');
       _statusController.add(DownloadStatusEvent(
         videoId: videoId,
-        status: LocalDownloadStatus.downloading,
+        status: LocalDownloadStatus.failed,
+        error: 'Download task lost. Please delete and re-download.',
       ));
     }
   }
@@ -417,34 +449,32 @@ class DownloadService {
           break;
           
         case TaskStatus.complete:
-          // Get actual file path - background_downloader may return without leading /
-          var actualPath = p.join(update.task.directory, update.task.filename);
-          
-          // Ensure path is absolute (fix for iOS simulator)
-          if (!actualPath.startsWith('/')) {
-            actualPath = '/$actualPath';
-          }
+          // Construct the absolute path correctly
+          // task.directory is relative (e.g. 'VidKeep'), but we want the full system path
+          // We rely on getDownloadDirectory() which returns the absolute path to '.../VidKeep'
+          final downloadDir = await getDownloadDirectory();
+          var actualPath = p.join(downloadDir.path, update.task.filename);
           
           var file = File(actualPath);
           
           debugPrint('[DownloadService] Download complete for: $videoId');
-          debugPrint('[DownloadService] Actual file path: $actualPath');
+          debugPrint('[DownloadService] Absolute path: $actualPath');
           
           var exists = await file.exists();
-          debugPrint('[DownloadService] File exists at actual path: $exists');
+          debugPrint('[DownloadService] File exists at path: $exists');
           
-          // If file not found, try the original stored path from DB
+          // If file not found there, try the original stored path from DB (fallback)
           if (!exists) {
-            final stored = await _db.getDownload(videoId);
-            if (stored != null) {
-              debugPrint('[DownloadService] Trying stored path: ${stored.localPath}');
-              file = File(stored.localPath);
-              exists = await file.exists();
-              debugPrint('[DownloadService] File exists at stored path: $exists');
-              if (exists) {
-                actualPath = stored.localPath;
-              }
-            }
+             final stored = await _db.getDownload(videoId);
+             if (stored != null) {
+               debugPrint('[DownloadService] Trying stored path: ${stored.localPath}');
+               final storedFile = File(stored.localPath);
+               if (await storedFile.exists()) {
+                 actualPath = stored.localPath;
+                 file = storedFile;
+                 exists = true;
+               }
+             }
           }
           
           final fileSize = exists ? await file.length() : 0;

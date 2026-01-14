@@ -157,11 +157,20 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen> {
   void dispose() {
     _chewieController?.dispose();
     _videoController?.dispose();
-    // Restore portrait orientation when leaving
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
+    // Restore appropriate orientation when leaving
+    // Android (CarLinkit TBox): landscape only
+    // iOS: portrait (default mobile behavior)
+    if (Platform.isAndroid) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    } else {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    }
     super.dispose();
   }
 

@@ -66,12 +66,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: Stack(
         children: [
           _buildBody(),
-          // CRT Scanlines overlay
-          const Positioned.fill(
-            child: IgnorePointer(
-              child: ScanlinesOverlay(),
-            ),
-          ),
+          // Scanlines removed for sharpness on low-res screens
+          // const Positioned.fill(
+          //   child: IgnorePointer(
+          //     child: ScanlinesOverlay(),
+          //   ),
+          // ),
         ],
       ),
       bottomNavigationBar: _buildBottomNav(),

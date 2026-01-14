@@ -260,7 +260,16 @@ flutter devices
 | Date | Phase | Action | Details |
 |------|-------|--------|---------|
 | 2026-01-13 | Planning | Ticket created | Based on manager's setup guide |
-| 2026-01-13 | Setup | System image download | Running: `sdkmanager "system-images;android-33;google_apis;arm64-v8a"` |
+| 2026-01-13 | Setup | System image download | `system-images;android-33;google_apis;arm64-v8a` already installed |
+| 2026-01-13 | Setup | AVD created | `CarLinkit_Auto` with `automotive_1024p_landscape` profile |
+| 2026-01-13 | Config | AndroidManifest updated | Added INTERNET permission, sensorLandscape, app label "VidKeep", usesCleartextTraffic |
+| 2026-01-13 | Config | Orientation fix | Added `SystemChrome.setPreferredOrientations` in `main.dart` for Android |
+| 2026-01-13 | Config | Player orientation fix | Platform-aware orientation restore in `video_player_screen.dart` |
+| 2026-01-13 | Testing | Emulator testing | All features verified: grid, playback, favorites, queue, WebSocket, orientation |
+| 2026-01-13 | Testing | Unit tests | All 44 tests passing |
+| 2026-01-13 | Bugfix | Offline Playback | Fixed `ExoPlayer Source error` by standardizing storage paths |
+| 2026-01-13 | Feature | Public Storage | Implemented downloads to `/storage/emulated/0/Download/VidKeep` for visibility |
+| 2026-01-13 | Testing | Public Storage | Verified file visibility in Files app and offline playback on emulator |
 
 ---
 
