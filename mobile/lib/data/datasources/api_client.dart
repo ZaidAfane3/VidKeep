@@ -8,7 +8,7 @@ import '../../core/config/app_config.dart';
 import '../../core/constants/api_constants.dart';
 
 /// API client for VidKeep backend
-class VidKeepApiClient {A
+class VidKeepApiClient {
   final Dio _dio;
   final String baseUrl;
 

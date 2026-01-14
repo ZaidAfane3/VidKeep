@@ -8,6 +8,15 @@ import 'providers/providers.dart';
 import 'providers/download_providers.dart';
 import 'data/database/database.dart';
 
+/// Custom HttpOverrides to bypass SSL certificate verification
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (cert, host, port) => true;
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -21,6 +30,12 @@ void main() async {
   
   // Initialize SharedPreferences before app starts
   final prefs = await SharedPreferences.getInstance();
+  
+  // Check if SSL verification should be disabled
+  final disableSsl = prefs.getBool('disable_ssl_verify') ?? false;
+  if (disableSsl) {
+    HttpOverrides.global = MyHttpOverrides();
+  }
   
   // Initialize the database
   final database = AppDatabase();

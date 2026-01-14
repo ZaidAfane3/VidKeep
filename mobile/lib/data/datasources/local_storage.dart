@@ -18,8 +18,8 @@ class LocalStorage {
   /// Clear server URL
   Future<bool> clearServerUrl() => _prefs.remove(_keyServerUrl);
 
-  /// Get SSL verification disabled setting
-  bool getDisableSslVerify() => _prefs.getBool(_keyDisableSslVerify) ?? false;
+  /// Get SSL verification disabled setting (defaults to true = bypass SSL)
+  bool getDisableSslVerify() => _prefs.getBool(_keyDisableSslVerify) ?? true;
 
   /// Save SSL verification disabled setting
   Future<bool> saveDisableSslVerify(bool disable) => _prefs.setBool(_keyDisableSslVerify, disable);
