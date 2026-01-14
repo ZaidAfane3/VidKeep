@@ -57,6 +57,7 @@ frontend/build/
 *.jpg
 *.jpeg
 *.png
+!mobile/android/app/src/main/res/mipmap-*/ic_launcher*.png
 *.webp
 
 # Logs
