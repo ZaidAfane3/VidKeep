@@ -240,13 +240,51 @@ class DownloadService {
 
   /// Resume a paused download
   Future<void> resumeDownload(String videoId) async {
-    final task = _activeTasks[videoId];
+    var task = _activeTasks[videoId];
+    
+    // If not in memory, try to find from FileDownloader's database
+    if (task == null) {
+      final records = await FileDownloader().database.allRecords();
+      final existingRecord = records
+          .where((r) => r.task.metaData == videoId && r.task is DownloadTask)
+          .firstOrNull;
+      
+      if (existingRecord != null) {
+        task = existingRecord.task as DownloadTask;
+        _activeTasks[videoId] = task;
+        debugPrint('[DownloadService] Recovered task for $videoId from FileDownloader database');
+      }
+    }
+    
     if (task != null) {
-      await FileDownloader().resume(task);
-      await _db.updateStatus(videoId, 'downloading');
+      final success = await FileDownloader().resume(task);
+      debugPrint('[DownloadService] Resume result for $videoId: $success');
+      if (success) {
+        await _db.updateStatus(videoId, 'downloading');
+        _statusController.add(DownloadStatusEvent(
+          videoId: videoId,
+          status: LocalDownloadStatus.downloading,
+        ));
+      } else {
+        // Resume failed - task may have been lost, need to re-download
+        debugPrint('[DownloadService] Resume failed for $videoId, task may be lost');
+        await _db.updateStatus(videoId, 'failed', 
+          errorMessage: 'Resume failed. Please delete and re-download.');
+        _statusController.add(DownloadStatusEvent(
+          videoId: videoId,
+          status: LocalDownloadStatus.failed,
+          error: 'Resume failed. Please delete and re-download.',
+        ));
+      }
+    } else {
+      // No task found at all - mark as failed
+      debugPrint('[DownloadService] No task found for $videoId to resume');
+      await _db.updateStatus(videoId, 'failed', 
+        errorMessage: 'Download task lost. Please delete and re-download.');
       _statusController.add(DownloadStatusEvent(
         videoId: videoId,
-        status: LocalDownloadStatus.downloading,
+        status: LocalDownloadStatus.failed,
+        error: 'Download task lost. Please delete and re-download.',
       ));
     }
   }
