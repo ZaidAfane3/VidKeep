@@ -1,0 +1,67 @@
+name: Build Flutter APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/flutter-build.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: mobile
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.1'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build APK (Release)
+        run: flutter build apk --release
+
+      - name: Rename APK with version
+        run: |
+          VERSION=$(grep 'version:' pubspec.yaml | sed 's/version: //' | tr '+' '-')
+          mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/vidkeep-${VERSION}.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vidkeep-apk
+          path: mobile/build/app/outputs/flutter-apk/vidkeep-*.apk
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Get APK size
+        run: |
+          APK_PATH=$(ls build/app/outputs/flutter-apk/vidkeep-*.apk)
+          SIZE=$(du -h "$APK_PATH" | cut -f1)
+          echo "### 📱 APK Built Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Size:** $SIZE" >> $GITHUB_STEP_SUMMARY
+          echo "- **File:** $(basename $APK_PATH)" >> $GITHUB_STEP_SUMMARY
