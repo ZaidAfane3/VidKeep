@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import '../models/video.dart';
 import '../models/channel.dart';
 import '../models/queue_status.dart';
@@ -6,11 +8,11 @@ import '../../core/config/app_config.dart';
 import '../../core/constants/api_constants.dart';
 
 /// API client for VidKeep backend
-class VidKeepApiClient {
+class VidKeepApiClient {A
   final Dio _dio;
   final String baseUrl;
 
-  VidKeepApiClient({required this.baseUrl})
+  VidKeepApiClient({required this.baseUrl, bool disableSslVerify = false})
       : _dio = Dio(BaseOptions(
           baseUrl: baseUrl,
           connectTimeout: Duration(seconds: AppConfig.httpConnectTimeoutSec),
@@ -19,7 +21,15 @@ class VidKeepApiClient {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
-        ));
+        )) {
+    if (disableSslVerify) {
+      (_dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+        final client = HttpClient();
+        client.badCertificateCallback = (cert, host, port) => true;
+        return client;
+      };
+    }
+  }
 
   /// Test connection to server
   Future<bool> testConnection() async {

@@ -222,6 +222,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ],
+        const SizedBox(height: 16),
+        const Divider(color: AppColors.borderColor, height: 1),
+        // SSL Verification toggle
+        Consumer(
+          builder: (context, ref, _) {
+            final disableSsl = ref.watch(disableSslVerifyProvider);
+            return _buildSettingsTile(
+              icon: Icons.security,
+              title: 'DISABLE SSL VERIFY',
+              subtitle: 'Allow self-signed certificates',
+              trailing: Switch(
+                value: disableSsl,
+                onChanged: (value) {
+                  ref.read(disableSslVerifyProvider.notifier).setDisableSslVerify(value);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        value ? 'SSL verification disabled' : 'SSL verification enabled',
+                        style: GoogleFonts.shareTechMono(),
+                      ),
+                      backgroundColor: AppColors.darkGreen,
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+                activeTrackColor: AppColors.neonGreen,
+              ),
+            );
+          },
+        ),
       ],
     );
   }

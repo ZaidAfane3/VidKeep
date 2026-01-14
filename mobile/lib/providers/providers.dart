@@ -38,11 +38,29 @@ class ServerUrlNotifier extends StateNotifier<String?> {
   }
 }
 
-/// API Client provider - depends on server URL
+/// SSL verification disable provider (reactive)
+final disableSslVerifyProvider = StateNotifierProvider<DisableSslVerifyNotifier, bool>((ref) {
+  final localStorage = ref.watch(localStorageProvider);
+  return DisableSslVerifyNotifier(localStorage);
+});
+
+class DisableSslVerifyNotifier extends StateNotifier<bool> {
+  final LocalStorage _localStorage;
+
+  DisableSslVerifyNotifier(this._localStorage) : super(_localStorage.getDisableSslVerify());
+
+  Future<void> setDisableSslVerify(bool disable) async {
+    await _localStorage.saveDisableSslVerify(disable);
+    state = disable;
+  }
+}
+
+/// API Client provider - depends on server URL and SSL setting
 final apiClientProvider = Provider<VidKeepApiClient?>((ref) {
   final serverUrl = ref.watch(serverUrlProvider);
+  final disableSslVerify = ref.watch(disableSslVerifyProvider);
   if (serverUrl == null || serverUrl.isEmpty) return null;
-  return VidKeepApiClient(baseUrl: serverUrl);
+  return VidKeepApiClient(baseUrl: serverUrl, disableSslVerify: disableSslVerify);
 });
 
 /// WebSocket client provider
